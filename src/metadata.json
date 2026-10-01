@@ -1,0 +1,16 @@
+{
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "Strandzen",
+                "Email": "strandzen@gmail.com"
+            }
+        ],
+        "Category": "Window Management",
+        "Description": "Loop-style directional window snapping: hold the hyperkey, move the mouse to pick a direction, release to snap.",
+        "EnabledByDefault": false,
+        "Id": "loop-lite",
+        "License": "GPL-2.0-or-later",
+        "Name": "Loop Lite"
+    }
+}

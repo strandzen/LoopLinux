@@ -1,0 +1,4 @@
+File=loopliteconfig.kcfg
+ClassName=LoopLiteConfig
+Mutators=true
+Singleton=true

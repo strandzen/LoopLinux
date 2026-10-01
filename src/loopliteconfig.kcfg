@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE kcfg SYSTEM "http://www.kde.org/standards/kcfg/1.0/kcfg.dtd">
+<kcfg xmlns="http://www.kde.org/standards/kcfg/1.0"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://www.kde.org/standards/kcfg/1.0
+                          http://www.kde.org/standards/kcfg/1.0/kcfg.xsd">
+  <kcfgfile name="kwinrc"/>
+  <group name="Effect-loop-lite">
+    <!-- Whether a straight up/down drag (no horizontal component) snaps to
+         the top/bottom half. Left undecided in the spec; default to on. -->
+    <entry name="EnableTopBottomHalves" type="Bool">
+      <default>true</default>
+    </entry>
+    <!-- Pointer displacement (px) from the hyperkey-press position required
+         before a direction is considered selected. -->
+    <entry name="DirectionDeadzone" type="Int">
+      <default>24</default>
+    </entry>
+  </group>
+</kcfg>
