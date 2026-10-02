@@ -1,0 +1,14 @@
+{
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "Strandzen",
+                "Email": "strandzen@gmail.com"
+            }
+        ],
+        "Description": "Configure Loop Lite directional window snapping",
+        "Icon": "preferences-system-windows",
+        "License": "GPL-2.0-or-later",
+        "Name": "Loop Lite"
+    }
+}
