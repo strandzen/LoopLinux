@@ -1,4 +1,5 @@
 {
+    "X-KDE-ConfigModule": "kwin_effect_loop_lite_config",
     "KPlugin": {
         "Authors": [
             {

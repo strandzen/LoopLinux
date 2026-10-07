@@ -50,12 +50,15 @@ public:
 protected:
     void grabbedKeyboardEvent(QKeyEvent *event) override;
     void pointerMotion(KWin::PointerMotionEvent *event) override;
+    void reconfigure(ReconfigureFlags flags) override;
 
 private:
     void arm();
     void finish(bool applyPendingDirection);
     void updateDirectionFromPointer();
     void setDirection(SnapDirection direction);
+    void applyIndicatorStyle();
+    void repositionIndicator();
 
     // Hyperkey+<key> actions available while armed. To add a new binding,
     // add a case in grabbedKeyboardEvent's key-action table in the .cpp.
@@ -70,4 +73,12 @@ private:
     QPointF m_accumulatedDelta;
     SnapDirection m_direction = SnapDirection::None;
     bool m_active = false;
+
+    // Currently-held direction keys, composed into a single SnapDirection
+    // (see composeDirection() in the .cpp) so holding two at once — e.g.
+    // Up+Left — selects a corner instead of only the latest key winning.
+    bool m_keyUp = false;
+    bool m_keyDown = false;
+    bool m_keyLeft = false;
+    bool m_keyRight = false;
 };

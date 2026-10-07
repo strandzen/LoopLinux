@@ -16,10 +16,11 @@ class LoopLiteConfigModule : public KQuickConfigModule
 {
     Q_OBJECT
 
-    Q_PROPERTY(bool enableTopBottomHalves READ enableTopBottomHalves WRITE setEnableTopBottomHalves NOTIFY settingsChanged)
     Q_PROPERTY(int horizontalDeadzone READ horizontalDeadzone WRITE setHorizontalDeadzone NOTIFY settingsChanged)
     Q_PROPERTY(int verticalDeadzone READ verticalDeadzone WRITE setVerticalDeadzone NOTIFY settingsChanged)
-    Q_PROPERTY(int windowPadding READ windowPadding WRITE setWindowPadding NOTIFY settingsChanged)
+    Q_PROPERTY(int paddingHorizontal READ paddingHorizontal WRITE setPaddingHorizontal NOTIFY settingsChanged)
+    Q_PROPERTY(int paddingVertical READ paddingVertical WRITE setPaddingVertical NOTIFY settingsChanged)
+    Q_PROPERTY(int indicatorSize READ indicatorSize WRITE setIndicatorSize NOTIFY settingsChanged)
     Q_PROPERTY(int indicatorCornerRadius READ indicatorCornerRadius WRITE setIndicatorCornerRadius NOTIFY settingsChanged)
     Q_PROPERTY(int indicatorRingWidth READ indicatorRingWidth WRITE setIndicatorRingWidth NOTIFY settingsChanged)
     Q_PROPERTY(bool showIndicatorText READ showIndicatorText WRITE setShowIndicatorText NOTIFY settingsChanged)
@@ -35,17 +36,20 @@ class LoopLiteConfigModule : public KQuickConfigModule
 public:
     explicit LoopLiteConfigModule(QObject *parent, const KPluginMetaData &metaData);
 
-    bool enableTopBottomHalves() const;
-    void setEnableTopBottomHalves(bool value);
-
     int horizontalDeadzone() const;
     void setHorizontalDeadzone(int value);
 
     int verticalDeadzone() const;
     void setVerticalDeadzone(int value);
 
-    int windowPadding() const;
-    void setWindowPadding(int value);
+    int paddingHorizontal() const;
+    void setPaddingHorizontal(int value);
+
+    int paddingVertical() const;
+    void setPaddingVertical(int value);
+
+    int indicatorSize() const;
+    void setIndicatorSize(int value);
 
     int indicatorCornerRadius() const;
     void setIndicatorCornerRadius(int value);

@@ -9,18 +9,6 @@ LoopLiteConfigModule::LoopLiteConfigModule(QObject *parent, const KPluginMetaDat
     setButtons(KAbstractConfigModule::Default);
 }
 
-bool LoopLiteConfigModule::enableTopBottomHalves() const
-{
-    return LoopLiteConfig::enableTopBottomHalves();
-}
-
-void LoopLiteConfigModule::setEnableTopBottomHalves(bool value)
-{
-    LoopLiteConfig::setEnableTopBottomHalves(value);
-    LoopLiteConfig::self()->save();
-    Q_EMIT settingsChanged();
-}
-
 int LoopLiteConfigModule::horizontalDeadzone() const
 {
     return LoopLiteConfig::horizontalDeadzone();
@@ -45,14 +33,38 @@ void LoopLiteConfigModule::setVerticalDeadzone(int value)
     Q_EMIT settingsChanged();
 }
 
-int LoopLiteConfigModule::windowPadding() const
+int LoopLiteConfigModule::paddingHorizontal() const
 {
-    return LoopLiteConfig::windowPadding();
+    return LoopLiteConfig::paddingHorizontal();
 }
 
-void LoopLiteConfigModule::setWindowPadding(int value)
+void LoopLiteConfigModule::setPaddingHorizontal(int value)
 {
-    LoopLiteConfig::setWindowPadding(value);
+    LoopLiteConfig::setPaddingHorizontal(value);
+    LoopLiteConfig::self()->save();
+    Q_EMIT settingsChanged();
+}
+
+int LoopLiteConfigModule::paddingVertical() const
+{
+    return LoopLiteConfig::paddingVertical();
+}
+
+void LoopLiteConfigModule::setPaddingVertical(int value)
+{
+    LoopLiteConfig::setPaddingVertical(value);
+    LoopLiteConfig::self()->save();
+    Q_EMIT settingsChanged();
+}
+
+int LoopLiteConfigModule::indicatorSize() const
+{
+    return LoopLiteConfig::indicatorSize();
+}
+
+void LoopLiteConfigModule::setIndicatorSize(int value)
+{
+    LoopLiteConfig::setIndicatorSize(value);
     LoopLiteConfig::self()->save();
     Q_EMIT settingsChanged();
 }

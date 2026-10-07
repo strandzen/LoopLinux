@@ -1,4 +1,4 @@
-kconfig_add_kcfg_files(loop_lite_kcfg_SRCS loopliteconfig.kcfgc)
+kconfig_add_kcfg_files(loop_lite_kcfg_SRCS GENERATE_MOC loopliteconfig.kcfgc)
 
 kcoreaddons_add_plugin(kwin_effect_loop_lite
     SOURCES
@@ -27,3 +27,5 @@ target_link_libraries(kwin_effect_loop_lite PRIVATE
     KF6::GlobalAccel
     KWin::kwin
 )
+
+add_subdirectory(kcm)

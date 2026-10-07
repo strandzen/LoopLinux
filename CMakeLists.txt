@@ -19,6 +19,7 @@ find_package(Qt6 ${QT_MIN_VERSION} REQUIRED COMPONENTS Core Gui Qml Quick DBus)
 find_package(KF6Config REQUIRED)
 find_package(KF6CoreAddons REQUIRED)
 find_package(KF6GlobalAccel REQUIRED)
+find_package(KF6KCMUtils REQUIRED)
 find_package(KWin REQUIRED)
 
 add_subdirectory(src)

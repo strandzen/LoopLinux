@@ -6,15 +6,71 @@
                           http://www.kde.org/standards/kcfg/1.0/kcfg.xsd">
   <kcfgfile name="kwinrc"/>
   <group name="Effect-loop-lite">
-    <!-- Whether a straight up/down drag (no horizontal component) snaps to
-         the top/bottom half. Left undecided in the spec; default to on. -->
-    <entry name="EnableTopBottomHalves" type="Bool">
+    <!-- Pointer displacement (px) from the hyperkey-press position required
+         before a horizontal direction (left/right) is armed. -->
+    <entry name="HorizontalDeadzone" type="Int">
+      <default>24</default>
+    </entry>
+    <!-- Pointer displacement (px) required before a vertical direction
+         (top/bottom, or tipping a horizontal pick into a corner) is armed. -->
+    <entry name="VerticalDeadzone" type="Int">
+      <default>24</default>
+    </entry>
+    <!-- Gap (px) left on the left/right edges of a snapped window. -->
+    <entry name="PaddingHorizontal" type="Int">
+      <default>0</default>
+    </entry>
+    <!-- Gap (px) left on the top/bottom edges of a snapped window. -->
+    <entry name="PaddingVertical" type="Int">
+      <default>0</default>
+    </entry>
+    <!-- Diameter (px) of the center direction indicator. -->
+    <entry name="IndicatorSize" type="Int">
+      <default>220</default>
+    </entry>
+    <!-- Corner radius (px) of the small center direction indicator ring.
+         0 = square frame, half of IndicatorSize = full circle. -->
+    <entry name="IndicatorCornerRadius" type="Int">
+      <default>110</default>
+    </entry>
+    <!-- Ring thickness (px) of the center direction indicator. -->
+    <entry name="IndicatorRingWidth" type="Int">
+      <default>12</default>
+    </entry>
+    <!-- Whether the center indicator shows the direction name as text. -->
+    <entry name="ShowIndicatorText" type="Bool">
       <default>true</default>
     </entry>
-    <!-- Pointer displacement (px) from the hyperkey-press position required
-         before a direction is considered selected. -->
-    <entry name="DirectionDeadzone" type="Int">
-      <default>24</default>
+    <!-- Border thickness (px) of the target-outline preview. -->
+    <entry name="OutlineBorderWidth" type="Int">
+      <default>3</default>
+    </entry>
+    <!-- Corner radius (px) of the target-outline preview. -->
+    <entry name="OutlineCornerRadius" type="Int">
+      <default>6</default>
+    </entry>
+    <!-- Border/highlight color of the target-outline preview and the
+         selected segment of the center indicator ring. Alpha channel is
+         respected (KConfig's Color type round-trips it natively). -->
+    <entry name="OutlineColor" type="Color">
+      <default>61,174,233</default>
+    </entry>
+    <!-- Which key scheme selects a cardinal direction while armed. -->
+    <entry name="KeybindScheme" type="String">
+      <default>arrows</default>
+    </entry>
+    <!-- Whether the center direction indicator is shown at all. -->
+    <entry name="ShowIndicator" type="Bool">
+      <default>true</default>
+    </entry>
+    <!-- Whether the target-outline preview is shown at all. -->
+    <entry name="ShowOutline" type="Bool">
+      <default>true</default>
+    </entry>
+    <!-- Whether the center indicator tracks the live cursor position
+         instead of staying fixed at the screen's center. -->
+    <entry name="IndicatorFollowsMouse" type="Bool">
+      <default>false</default>
     </entry>
   </group>
 </kcfg>

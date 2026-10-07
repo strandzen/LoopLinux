@@ -27,13 +27,13 @@ QString snapDirectionName(SnapDirection direction)
     return QStringLiteral("none");
 }
 
-SnapDirection snapDirectionForDelta(const QPointF &delta, qreal deadzone, bool enableTopBottomHalves)
+SnapDirection snapDirectionForDelta(const QPointF &delta, qreal horizontalDeadzone, qreal verticalDeadzone)
 {
     const qreal absX = std::abs(delta.x());
     const qreal absY = std::abs(delta.y());
 
-    const bool hasHorizontal = absX >= deadzone;
-    const bool hasVertical = absY >= deadzone;
+    const bool hasHorizontal = absX >= horizontalDeadzone;
+    const bool hasVertical = absY >= verticalDeadzone;
     if (!hasHorizontal && !hasVertical) {
         return SnapDirection::None;
     }
@@ -52,38 +52,44 @@ SnapDirection snapDirectionForDelta(const QPointF &delta, qreal deadzone, bool e
         return movingRight ? SnapDirection::Right : SnapDirection::Left;
     }
 
-    if (!enableTopBottomHalves) {
-        return SnapDirection::None;
-    }
     return movingDown ? SnapDirection::Bottom : SnapDirection::Top;
 }
 
-QRectF snapTargetGeometry(SnapDirection direction, const QRectF &area)
+QRectF snapTargetGeometry(SnapDirection direction, const QRectF &area, qreal paddingHorizontal, qreal paddingVertical)
 {
     const qreal x = area.x();
     const qreal y = area.y();
     const qreal halfW = area.width() / 2.0;
     const qreal halfH = area.height() / 2.0;
 
+    QRectF result;
     switch (direction) {
     case SnapDirection::Left:
-        return QRectF(x, y, halfW, area.height());
-    case SnapDirection::Right:
-        return QRectF(x + halfW, y, halfW, area.height());
-    case SnapDirection::Top:
-        return QRectF(x, y, area.width(), halfH);
-    case SnapDirection::Bottom:
-        return QRectF(x, y + halfH, area.width(), halfH);
-    case SnapDirection::TopLeft:
-        return QRectF(x, y, halfW, halfH);
-    case SnapDirection::TopRight:
-        return QRectF(x + halfW, y, halfW, halfH);
-    case SnapDirection::BottomLeft:
-        return QRectF(x, y + halfH, halfW, halfH);
-    case SnapDirection::BottomRight:
-        return QRectF(x + halfW, y + halfH, halfW, halfH);
-    case SnapDirection::None:
+        result = QRectF(x, y, halfW, area.height());
         break;
+    case SnapDirection::Right:
+        result = QRectF(x + halfW, y, halfW, area.height());
+        break;
+    case SnapDirection::Top:
+        result = QRectF(x, y, area.width(), halfH);
+        break;
+    case SnapDirection::Bottom:
+        result = QRectF(x, y + halfH, area.width(), halfH);
+        break;
+    case SnapDirection::TopLeft:
+        result = QRectF(x, y, halfW, halfH);
+        break;
+    case SnapDirection::TopRight:
+        result = QRectF(x + halfW, y, halfW, halfH);
+        break;
+    case SnapDirection::BottomLeft:
+        result = QRectF(x, y + halfH, halfW, halfH);
+        break;
+    case SnapDirection::BottomRight:
+        result = QRectF(x + halfW, y + halfH, halfW, halfH);
+        break;
+    case SnapDirection::None:
+        return QRectF();
     }
-    return QRectF();
+    return result.adjusted(paddingHorizontal, paddingVertical, -paddingHorizontal, -paddingVertical);
 }
