@@ -121,6 +121,7 @@ How Sirkel stacks up against [Loop](https://github.com/MrKai77/Loop), the macOS 
 - **Thirds** - horizontal and vertical third/two-thirds placements, not just halves and quarters
 - **Cycles** - repeatedly pressing/clicking the same direction cycles the window through a small set of size variants (e.g. half → two-thirds → third) instead of re-picking the same geometry
 - **Screen switching** - move the active window to an adjacent monitor
+- **Separate colors** - Separate colors for indicator, preview, pointer, etc.
 
 ## License
 
