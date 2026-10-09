@@ -21,6 +21,8 @@ QString snapDirectionName(SnapDirection direction)
         return QStringLiteral("bottomLeft");
     case SnapDirection::BottomRight:
         return QStringLiteral("bottomRight");
+    case SnapDirection::Maximize:
+        return QStringLiteral("maximize");
     case SnapDirection::None:
         break;
     }
@@ -62,34 +64,58 @@ QRectF snapTargetGeometry(SnapDirection direction, const QRectF &area, qreal pad
     const qreal halfW = area.width() / 2.0;
     const qreal halfH = area.height() / 2.0;
 
+    // An edge against the screen's own border gets the full padding; an
+    // edge shared with an adjacent half/quarter (the split line between two
+    // snapped windows) gets only half, since the window on the other side
+    // of that line contributes its own half too — otherwise two side-by-
+    // side windows would end up with double the gap between them that they
+    // have against the screen edge.
+    bool sharedLeft = false, sharedRight = false, sharedTop = false, sharedBottom = false;
+
     QRectF result;
     switch (direction) {
     case SnapDirection::Left:
         result = QRectF(x, y, halfW, area.height());
+        sharedRight = true;
         break;
     case SnapDirection::Right:
         result = QRectF(x + halfW, y, halfW, area.height());
+        sharedLeft = true;
         break;
     case SnapDirection::Top:
         result = QRectF(x, y, area.width(), halfH);
+        sharedBottom = true;
         break;
     case SnapDirection::Bottom:
         result = QRectF(x, y + halfH, area.width(), halfH);
+        sharedTop = true;
         break;
     case SnapDirection::TopLeft:
         result = QRectF(x, y, halfW, halfH);
+        sharedRight = sharedBottom = true;
         break;
     case SnapDirection::TopRight:
         result = QRectF(x + halfW, y, halfW, halfH);
+        sharedLeft = sharedBottom = true;
         break;
     case SnapDirection::BottomLeft:
         result = QRectF(x, y + halfH, halfW, halfH);
+        sharedRight = sharedTop = true;
         break;
     case SnapDirection::BottomRight:
         result = QRectF(x + halfW, y + halfH, halfW, halfH);
+        sharedLeft = sharedTop = true;
+        break;
+    case SnapDirection::Maximize:
+        result = area;
         break;
     case SnapDirection::None:
         return QRectF();
     }
-    return result.adjusted(paddingHorizontal, paddingVertical, -paddingHorizontal, -paddingVertical);
+
+    const qreal left = sharedLeft ? paddingHorizontal / 2.0 : paddingHorizontal;
+    const qreal right = sharedRight ? paddingHorizontal / 2.0 : paddingHorizontal;
+    const qreal top = sharedTop ? paddingVertical / 2.0 : paddingVertical;
+    const qreal bottom = sharedBottom ? paddingVertical / 2.0 : paddingVertical;
+    return result.adjusted(left, top, -right, -bottom);
 }

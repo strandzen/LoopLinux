@@ -93,6 +93,18 @@ void LoopLiteConfigModule::setIndicatorRingWidth(int value)
     Q_EMIT settingsChanged();
 }
 
+int LoopLiteConfigModule::indicatorPointerLength() const
+{
+    return LoopLiteConfig::indicatorPointerLength();
+}
+
+void LoopLiteConfigModule::setIndicatorPointerLength(int value)
+{
+    LoopLiteConfig::setIndicatorPointerLength(value);
+    LoopLiteConfig::self()->save();
+    Q_EMIT settingsChanged();
+}
+
 bool LoopLiteConfigModule::showIndicatorText() const
 {
     return LoopLiteConfig::showIndicatorText();
@@ -137,6 +149,30 @@ QColor LoopLiteConfigModule::outlineColor() const
 void LoopLiteConfigModule::setOutlineColor(const QColor &value)
 {
     LoopLiteConfig::setOutlineColor(value);
+    LoopLiteConfig::self()->save();
+    Q_EMIT settingsChanged();
+}
+
+int LoopLiteConfigModule::outlineFillOpacity() const
+{
+    return LoopLiteConfig::outlineFillOpacity();
+}
+
+void LoopLiteConfigModule::setOutlineFillOpacity(int value)
+{
+    LoopLiteConfig::setOutlineFillOpacity(value);
+    LoopLiteConfig::self()->save();
+    Q_EMIT settingsChanged();
+}
+
+int LoopLiteConfigModule::outlineAnimationDuration() const
+{
+    return LoopLiteConfig::outlineAnimationDuration();
+}
+
+void LoopLiteConfigModule::setOutlineAnimationDuration(int value)
+{
+    LoopLiteConfig::setOutlineAnimationDuration(value);
     LoopLiteConfig::self()->save();
     Q_EMIT settingsChanged();
 }

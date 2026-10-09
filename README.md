@@ -81,6 +81,41 @@ Settings changes take effect automatically the next time you hold the hyperkey �
 - Keybind schemes are fixed presets (arrows / WASD / HJKL), not arbitrary rebinding
 - Snapping doesn't move a window to a different monitor
 
+## Comparison with Loop
+
+How Loop Lite stacks up against [Loop](https://github.com/MrKai77/Loop), the macOS app it's inspired by.
+
+| Feature | Loop | Loop Lite |
+|---|---|---|
+| Radial menu (hold key, drag mouse, release to snap) | ✅ | ✅ |
+| Preview window before committing | ✅ | ✅ (Outline) |
+| Modifier + arrow keys | ✅ | ✅ |
+| Modifier + mouse | ✅ | ✅ |
+| Halves & quarters | ✅ | ✅ |
+| Padding/margins | ✅ | ✅ |
+| Radial menu theming (width/shape/color) | ✅ | ✅ (ring width, corner radius, color) |
+| Preview theming (padding, corner radius, border color/width) | ✅ | ✅ (+ fill opacity) |
+| Indicator/preview independently toggleable | ✅ | ✅ |
+| Maximize / center gesture | ✅ | ✅ |
+| Thirds (horizontal/vertical, two-thirds variants) | ✅ | ❌ |
+| Per-action custom keybinds (any key → any specific action) | ✅ | ❌ |
+| Cycles (repeated press/click cycles through size variants) | ✅ | ❌ |
+| Stash (hide windows at screen edge, reveal on hover) | ✅ | ❌ |
+| Granular manipulation (Larger/Smaller, Grow/Shrink per edge, nudge) | ✅ | ❌ |
+| Undo last action | ✅ | ❌ |
+| Restore initial frame (snap back to pre-Loop geometry) | ✅ | ❌ |
+| Screen switching (move window to an adjacent monitor) | ✅ | ❌ |
+| Almost Maximize / Centre as distinct actions | ✅ | ❌ |
+| Snap via drag-to-edge (no hyperkey needed) | ✅ | ❌ |
+| Separate colors for indicator vs. outline | Implied | ❌ (one shared color) |
+
+## Roadmap
+
+- **Custom keybinds** — real per-action global shortcuts via `System Settings → Shortcuts` (maximize, minimize, each directional snap, and more), replacing the current fixed arrows/WASD/HJKL preset dropdown
+- **Thirds** — horizontal and vertical third/two-thirds placements, not just halves and quarters
+- **Cycles** — repeatedly pressing/clicking the same direction cycles the window through a small set of size variants (e.g. half → two-thirds → third) instead of re-picking the same geometry
+- **Screen switching** — move the active window to an adjacent monitor
+
 ## License
 
 GPL-2.0-or-later.

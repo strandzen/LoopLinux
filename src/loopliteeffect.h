@@ -5,6 +5,7 @@
 #include <effect/effect.h>
 
 #include <QPointF>
+#include <QRectF>
 
 #include <memory>
 
@@ -55,6 +56,7 @@ protected:
 private:
     void arm();
     void finish(bool applyPendingDirection);
+    void engage();
     void updateDirectionFromPointer();
     void setDirection(SnapDirection direction);
     void applyIndicatorStyle();
@@ -70,9 +72,22 @@ private:
     std::unique_ptr<QQuickView> m_indicator;
     KWin::EffectWindow *m_targetWindow = nullptr;
     KWin::LogicalOutput *m_targetScreen = nullptr;
+    // The target screen's usable area for this session, computed once in
+    // arm(). m_outline's own window is sized to cover this area for the
+    // whole session (not resized per direction change any more) so that
+    // moving between directions can be an animated glide of an inner QML
+    // rect instead of an instant window move/resize — also reused by
+    // finish() and actionMaximize() instead of each re-querying it.
+    QRectF m_outlineArea;
     QPointF m_accumulatedDelta;
     SnapDirection m_direction = SnapDirection::None;
     bool m_active = false;
+    // Holding the hyperkey alone must not show the indicator or grab the
+    // screen's attention — only once real input arrives (mouse movement, or
+    // a direction key) does the session "engage" and the UI appear. Until
+    // then, grabKeyboard()/startMouseInterception() are already in effect
+    // (needed to detect that first input at all) but nothing is visible.
+    bool m_engaged = false;
 
     // Currently-held direction keys, composed into a single SnapDirection
     // (see composeDirection() in the .cpp) so holding two at once — e.g.

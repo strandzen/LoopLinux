@@ -115,6 +115,14 @@ QQC2.ScrollView {
             onValueModified: kcm.indicatorRingWidth = value
         }
 
+        QQC2.SpinBox {
+            Kirigami.FormData.label: "Pointer length (px):"
+            from: 6
+            to: 200
+            value: kcm.indicatorPointerLength
+            onValueModified: kcm.indicatorPointerLength = value
+        }
+
         Kirigami.Separator {
             Kirigami.FormData.isSection: true
             Kirigami.FormData.label: "Window Outline"
@@ -141,6 +149,26 @@ QQC2.ScrollView {
             to: 60
             value: kcm.outlineCornerRadius
             onValueModified: kcm.outlineCornerRadius = value
+        }
+
+        QQC2.SpinBox {
+            Kirigami.FormData.label: "Fill opacity (%):"
+            from: 0
+            to: 100
+            value: kcm.outlineFillOpacity
+            onValueModified: kcm.outlineFillOpacity = value
+        }
+
+        QQC2.SpinBox {
+            Kirigami.FormData.label: "Animation duration (ms):"
+            from: 0
+            to: 1000
+            stepSize: 10
+            value: kcm.outlineAnimationDuration
+            onValueModified: kcm.outlineAnimationDuration = value
+
+            QQC2.ToolTip.text: "0 = instant (snaps straight to the new position/size). Higher values glide/grow the outline, and grow/shrink the indicator pointer into and out of maximize, more slowly."
+            QQC2.ToolTip.visible: hovered
         }
 
         Kirigami.Separator {

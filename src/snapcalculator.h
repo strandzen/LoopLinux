@@ -12,6 +12,10 @@ enum class SnapDirection {
     TopRight,
     BottomLeft,
     BottomRight,
+    // The pointer parked in the indicator's own center deadzone — maximizes
+    // the window (padded, like every other direction) instead of snapping
+    // to a half/corner.
+    Maximize,
 };
 
 QString snapDirectionName(SnapDirection direction);

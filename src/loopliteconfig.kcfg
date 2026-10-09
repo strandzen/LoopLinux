@@ -37,6 +37,12 @@
     <entry name="IndicatorRingWidth" type="Int">
       <default>12</default>
     </entry>
+    <!-- Length (px) of the sliding pointer/marker along the indicator
+         ring's own curve. Its thickness always matches IndicatorRingWidth
+         (the pointer fills the ring it rides on, not an independent size). -->
+    <entry name="IndicatorPointerLength" type="Int">
+      <default>36</default>
+    </entry>
     <!-- Whether the center indicator shows the direction name as text. -->
     <entry name="ShowIndicatorText" type="Bool">
       <default>true</default>
@@ -48,6 +54,17 @@
     <!-- Corner radius (px) of the target-outline preview. -->
     <entry name="OutlineCornerRadius" type="Int">
       <default>6</default>
+    </entry>
+    <!-- Opacity (0-100) of a translucent fill inside the target-outline
+         preview, in addition to its border. 0 = no fill (unchanged look). -->
+    <entry name="OutlineFillOpacity" type="Int">
+      <default>0</default>
+    </entry>
+    <!-- How long (ms) the target-outline preview takes to glide/resize
+         between directions. 0 = instant (snaps straight to the new
+         position/size, the original behavior). -->
+    <entry name="OutlineAnimationDuration" type="Int">
+      <default>0</default>
     </entry>
     <!-- Border/highlight color of the target-outline preview and the
          selected segment of the center indicator ring. Alpha channel is

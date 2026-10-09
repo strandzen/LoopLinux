@@ -1,12 +1,20 @@
 import QtQuick
 
-// Preview of where the window will land. Lives in its own fully transparent
-// QQuickWindow sized/positioned to exactly the target rect (see
-// LoopLiteEffect::setDirection()), so only the border is visible — the
-// live desktop shows through everywhere inside and outside it. borderWidth,
-// borderColor, and cornerRadius are pushed from
+// Preview of where the window will land. Its own window now stays fixed for
+// the whole session, sized/positioned to cover the target screen's entire
+// usable area (set once by LoopLiteEffect::arm(), via m_outlineArea) — only
+// the inner Rectangle's geometry changes as the direction changes, in
+// window-local coordinates (targetX/Y/Width/Height, pushed by
+// LoopLiteEffect::setDirection()). That's what lets it glide/grow between
+// directions via ordinary QML Behavior animations instead of an instant
+// window move+resize, which can't be animated the same way. Only the border
+// (and, optionally, a translucent fill inside it) is visible — the live
+// desktop shows through everywhere outside it, and through the inside too
+// when fillOpacity is 0. borderWidth, borderColor, cornerRadius,
+// fillOpacity, and animationDuration are pushed from
 // LoopLiteEffect::applyIndicatorStyle() (LoopLiteConfig::OutlineBorderWidth /
-// OutlineColor / OutlineCornerRadius).
+// OutlineColor / OutlineCornerRadius / OutlineFillOpacity /
+// OutlineAnimationDuration).
 Item {
     id: root
     anchors.fill: parent
@@ -14,11 +22,42 @@ Item {
     property real borderWidth: 3
     property color borderColor: "#3daee9"
     property real cornerRadius: 6
+    property real fillOpacity: 0
+    property int animationDuration: 0
+
+    // Window-local target rect for the highlighted area. LoopLiteEffect
+    // resets this to a zero-size rect at the target screen's center (while
+    // still hidden) at the start of every session, so the very first
+    // direction picked grows out from the middle rather than gliding in
+    // from wherever the previous session last left it.
+    property real targetX: 0
+    property real targetY: 0
+    property real targetWidth: 0
+    property real targetHeight: 0
+
+    Behavior on targetX {
+        enabled: root.animationDuration > 0
+        NumberAnimation { duration: root.animationDuration; easing.type: Easing.OutCubic }
+    }
+    Behavior on targetY {
+        enabled: root.animationDuration > 0
+        NumberAnimation { duration: root.animationDuration; easing.type: Easing.OutCubic }
+    }
+    Behavior on targetWidth {
+        enabled: root.animationDuration > 0
+        NumberAnimation { duration: root.animationDuration; easing.type: Easing.OutCubic }
+    }
+    Behavior on targetHeight {
+        enabled: root.animationDuration > 0
+        NumberAnimation { duration: root.animationDuration; easing.type: Easing.OutCubic }
+    }
 
     Rectangle {
-        anchors.fill: parent
-        anchors.margins: root.borderWidth / 2
-        color: "transparent"
+        x: root.targetX + root.borderWidth / 2
+        y: root.targetY + root.borderWidth / 2
+        width: Math.max(0, root.targetWidth - root.borderWidth)
+        height: Math.max(0, root.targetHeight - root.borderWidth)
+        color: Qt.rgba(root.borderColor.r, root.borderColor.g, root.borderColor.b, root.fillOpacity / 100)
         border.color: root.borderColor
         border.width: root.borderWidth
         radius: root.cornerRadius

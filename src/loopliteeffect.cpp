@@ -159,11 +159,24 @@ void LoopLiteEffect::arm()
         qCWarning(LOOP_LITE) << "arm(): no active window, aborting";
         return;
     }
+    if (m_targetWindow->isSpecialWindow()) {
+        // Clicking the bare desktop can make KWin's desktop containment
+        // window (the wallpaper layer) the "active window" — calling
+        // moveResize() on that isn't a real window move, it visibly shifts
+        // the wallpaper and leaves part of the screen black where it used
+        // to be. isSpecialWindow() covers the desktop, docks/panels, and
+        // similar window types that aren't meant to be moved/resized at
+        // all, so refuse to arm against any of them.
+        qCWarning(LOOP_LITE) << "arm(): active window is a special window (desktop/panel/etc), aborting";
+        m_targetWindow = nullptr;
+        return;
+    }
     m_targetScreen = m_targetWindow->screen();
     m_accumulatedDelta = QPointF();
     m_direction = SnapDirection::None;
     m_keyUp = m_keyDown = m_keyLeft = m_keyRight = false;
     m_active = true;
+    m_engaged = false;
 
     applyIndicatorStyle();
 
@@ -172,13 +185,41 @@ void LoopLiteEffect::arm()
         if (QQuickItem *root = m_indicator->rootObject()) {
             root->setProperty("direction", snapDirectionName(m_direction));
         }
-        if (LoopLiteConfig::showIndicator()) {
-            m_indicator->show();
+        // Not shown yet — see engage(). Holding the hyperkey by itself
+        // should be a no-op; the indicator only appears once the first real
+        // input (mouse movement or a direction key) arrives.
+
+        // The outline's window now stays fixed for the whole session,
+        // covering the screen's entire usable area — only the highlighted
+        // rect inside it (targetX/Y/Width/Height) moves, so that move can
+        // be animated. Reset that rect to zero-size at the area's center
+        // while still hidden, so the first direction picked this session
+        // grows out from the middle instead of gliding in from wherever
+        // the previous session last left it.
+        m_outlineArea = KWin::effects->clientArea(KWin::MaximizeArea, m_targetScreen);
+        m_outline->setGeometry(m_outlineArea.toRect());
+        if (QQuickItem *root = m_outline->rootObject()) {
+            const QPointF center = m_outlineArea.center() - m_outlineArea.topLeft();
+            root->setProperty("targetX", center.x());
+            root->setProperty("targetY", center.y());
+            root->setProperty("targetWidth", 0);
+            root->setProperty("targetHeight", 0);
         }
     }
 
     KWin::effects->grabKeyboard(this);
     KWin::effects->startMouseInterception(this, Qt::CrossCursor);
+}
+
+void LoopLiteEffect::engage()
+{
+    if (m_engaged) {
+        return;
+    }
+    m_engaged = true;
+    if (m_targetScreen && LoopLiteConfig::showIndicator()) {
+        m_indicator->show();
+    }
 }
 
 void LoopLiteEffect::finish(bool applyPendingDirection)
@@ -192,8 +233,7 @@ void LoopLiteEffect::finish(bool applyPendingDirection)
     m_active = false;
 
     if (applyPendingDirection && m_targetWindow && m_direction != SnapDirection::None) {
-        const QRectF area = KWin::effects->clientArea(KWin::MaximizeArea, m_targetScreen);
-        const QRectF target = snapTargetGeometry(m_direction, area, LoopLiteConfig::paddingHorizontal(), LoopLiteConfig::paddingVertical());
+        const QRectF target = snapTargetGeometry(m_direction, m_outlineArea, LoopLiteConfig::paddingHorizontal(), LoopLiteConfig::paddingVertical());
         if (KWin::Window *window = m_targetWindow->window()) {
             window->setMaximize(false, false);
             window->moveResize(target);
@@ -208,7 +248,9 @@ void LoopLiteEffect::finish(bool applyPendingDirection)
 
     m_targetWindow = nullptr;
     m_targetScreen = nullptr;
+    m_outlineArea = QRectF();
     m_direction = SnapDirection::None;
+    m_engaged = false;
 }
 
 void LoopLiteEffect::setDirection(SnapDirection direction)
@@ -228,12 +270,18 @@ void LoopLiteEffect::setDirection(SnapDirection direction)
         return;
     }
 
-    // These are genuine top-level windows in global desktop coordinates
-    // (unlike QuickSceneView, which was scoped to one screen's own output),
-    // so the globally computed target rect can be used directly.
-    const QRectF area = KWin::effects->clientArea(KWin::MaximizeArea, m_targetScreen);
-    const QRectF target = snapTargetGeometry(m_direction, area, LoopLiteConfig::paddingHorizontal(), LoopLiteConfig::paddingVertical());
-    m_outline->setGeometry(target.toRect());
+    // The outline window itself stays fixed (covering m_outlineArea) for
+    // the whole session — only the highlighted rect inside it moves, in
+    // window-local coordinates, so QML's Behavior animations can glide/grow
+    // it between directions instead of an instant window move+resize.
+    const QRectF target = snapTargetGeometry(m_direction, m_outlineArea, LoopLiteConfig::paddingHorizontal(), LoopLiteConfig::paddingVertical());
+    if (QQuickItem *root = m_outline->rootObject()) {
+        const QRectF local = target.translated(-m_outlineArea.topLeft());
+        root->setProperty("targetX", local.x());
+        root->setProperty("targetY", local.y());
+        root->setProperty("targetWidth", local.width());
+        root->setProperty("targetHeight", local.height());
+    }
     if (LoopLiteConfig::showOutline()) {
         m_outline->show();
     }
@@ -242,12 +290,13 @@ void LoopLiteEffect::setDirection(SnapDirection direction)
 void LoopLiteEffect::updateDirectionFromPointer()
 {
     const SnapDirection candidate = snapDirectionForDelta(m_accumulatedDelta, LoopLiteConfig::horizontalDeadzone(), LoopLiteConfig::verticalDeadzone());
-    // Sticky: the pointer drifting back toward the deadzone (hand relaxing
-    // before releasing F24) must not undo the current placement — only
-    // clearing the deadzone in a *different* direction changes it.
-    if (candidate != SnapDirection::None) {
-        setDirection(candidate);
-    }
+    // The center deadzone is itself a live zone (the maximize gesture), not
+    // a "no selection yet" state — so unlike the 8 edge/corner directions,
+    // returning to center always re-selects it, even after a real direction
+    // was picked. (This does mean the hand easing back toward center right
+    // before releasing F24 will switch the pick to maximize — a deliberate
+    // trade-off for making center reachable at all after leaving it.)
+    setDirection(candidate == SnapDirection::None ? SnapDirection::Maximize : candidate);
 }
 
 void LoopLiteEffect::repositionIndicator()
@@ -272,23 +321,33 @@ void LoopLiteEffect::applyIndicatorStyle()
     if (QQuickItem *root = m_indicator->rootObject()) {
         root->setProperty("cornerRadius", LoopLiteConfig::indicatorCornerRadius());
         root->setProperty("ringWidth", LoopLiteConfig::indicatorRingWidth());
+        root->setProperty("pointerLength", LoopLiteConfig::indicatorPointerLength());
         root->setProperty("showText", LoopLiteConfig::showIndicatorText());
         root->setProperty("highlightColor", LoopLiteConfig::outlineColor());
+        root->setProperty("animationDuration", LoopLiteConfig::outlineAnimationDuration());
     }
     if (QQuickItem *root = m_outline->rootObject()) {
         root->setProperty("borderWidth", LoopLiteConfig::outlineBorderWidth());
         root->setProperty("borderColor", LoopLiteConfig::outlineColor());
         root->setProperty("cornerRadius", LoopLiteConfig::outlineCornerRadius());
+        root->setProperty("fillOpacity", LoopLiteConfig::outlineFillOpacity());
+        root->setProperty("animationDuration", LoopLiteConfig::outlineAnimationDuration());
     }
 }
 
 void LoopLiteEffect::actionMaximize()
 {
-    if (!m_targetWindow) {
+    if (!m_targetWindow || !m_targetScreen) {
         return;
     }
     if (KWin::Window *window = m_targetWindow->window()) {
-        window->setMaximize(true, true);
+        // Routed through the same padded geometry as the directional snaps
+        // (rather than window->setMaximize(true, true), which bypasses
+        // padding entirely) so Hyperkey+Enter and the center/maximize
+        // gesture both respect PaddingHorizontal/PaddingVertical.
+        const QRectF target = snapTargetGeometry(SnapDirection::Maximize, m_outlineArea, LoopLiteConfig::paddingHorizontal(), LoopLiteConfig::paddingVertical());
+        window->setMaximize(false, false);
+        window->moveResize(target);
     }
 }
 
@@ -316,6 +375,7 @@ void LoopLiteEffect::grabbedKeyboardEvent(QKeyEvent *event)
     // winning.
     const KeyAxis axis = axisForArmedKey(event->key(), LoopLiteConfig::keybindScheme());
     if (axis != KeyAxis::None && (event->type() == QEvent::KeyPress || event->type() == QEvent::KeyRelease)) {
+        engage();
         const bool pressed = (event->type() == QEvent::KeyPress);
         switch (axis) {
         case KeyAxis::Up:
@@ -363,6 +423,7 @@ void LoopLiteEffect::grabbedKeyboardEvent(QKeyEvent *event)
 
 void LoopLiteEffect::pointerMotion(KWin::PointerMotionEvent *event)
 {
+    engage();
     m_accumulatedDelta += event->delta;
     updateDirectionFromPointer();
 }

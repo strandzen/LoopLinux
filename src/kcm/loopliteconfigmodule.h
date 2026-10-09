@@ -23,10 +23,13 @@ class LoopLiteConfigModule : public KQuickConfigModule
     Q_PROPERTY(int indicatorSize READ indicatorSize WRITE setIndicatorSize NOTIFY settingsChanged)
     Q_PROPERTY(int indicatorCornerRadius READ indicatorCornerRadius WRITE setIndicatorCornerRadius NOTIFY settingsChanged)
     Q_PROPERTY(int indicatorRingWidth READ indicatorRingWidth WRITE setIndicatorRingWidth NOTIFY settingsChanged)
+    Q_PROPERTY(int indicatorPointerLength READ indicatorPointerLength WRITE setIndicatorPointerLength NOTIFY settingsChanged)
     Q_PROPERTY(bool showIndicatorText READ showIndicatorText WRITE setShowIndicatorText NOTIFY settingsChanged)
     Q_PROPERTY(int outlineBorderWidth READ outlineBorderWidth WRITE setOutlineBorderWidth NOTIFY settingsChanged)
     Q_PROPERTY(int outlineCornerRadius READ outlineCornerRadius WRITE setOutlineCornerRadius NOTIFY settingsChanged)
     Q_PROPERTY(QColor outlineColor READ outlineColor WRITE setOutlineColor NOTIFY settingsChanged)
+    Q_PROPERTY(int outlineFillOpacity READ outlineFillOpacity WRITE setOutlineFillOpacity NOTIFY settingsChanged)
+    Q_PROPERTY(int outlineAnimationDuration READ outlineAnimationDuration WRITE setOutlineAnimationDuration NOTIFY settingsChanged)
     Q_PROPERTY(QString keybindScheme READ keybindScheme WRITE setKeybindScheme NOTIFY settingsChanged)
     Q_PROPERTY(QStringList keybindSchemes READ keybindSchemes CONSTANT)
     Q_PROPERTY(bool showIndicator READ showIndicator WRITE setShowIndicator NOTIFY settingsChanged)
@@ -57,6 +60,9 @@ public:
     int indicatorRingWidth() const;
     void setIndicatorRingWidth(int value);
 
+    int indicatorPointerLength() const;
+    void setIndicatorPointerLength(int value);
+
     bool showIndicatorText() const;
     void setShowIndicatorText(bool value);
 
@@ -68,6 +74,12 @@ public:
 
     QColor outlineColor() const;
     void setOutlineColor(const QColor &value);
+
+    int outlineFillOpacity() const;
+    void setOutlineFillOpacity(int value);
+
+    int outlineAnimationDuration() const;
+    void setOutlineAnimationDuration(int value);
 
     // Stored value, not display label — presets intentionally fixed rather
     // than arbitrary rebinding, see Todo.md's keybinds item.
