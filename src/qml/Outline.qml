@@ -2,17 +2,17 @@ import QtQuick
 
 // Preview of where the window will land. Its own window now stays fixed for
 // the whole session, sized/positioned to cover the target screen's entire
-// usable area (set once by LoopLiteEffect::arm(), via m_outlineArea) — only
+// usable area (set once by SirkelEffect::arm(), via m_outlineArea) — only
 // the inner Rectangle's geometry changes as the direction changes, in
 // window-local coordinates (targetX/Y/Width/Height, pushed by
-// LoopLiteEffect::setDirection()). That's what lets it glide/grow between
+// SirkelEffect::setDirection()). That's what lets it glide/grow between
 // directions via ordinary QML Behavior animations instead of an instant
 // window move+resize, which can't be animated the same way. Only the border
 // (and, optionally, a translucent fill inside it) is visible — the live
 // desktop shows through everywhere outside it, and through the inside too
 // when fillOpacity is 0. borderWidth, borderColor, cornerRadius,
 // fillOpacity, and animationDuration are pushed from
-// LoopLiteEffect::applyIndicatorStyle() (LoopLiteConfig::OutlineBorderWidth /
+// SirkelEffect::applyIndicatorStyle() (SirkelConfig::OutlineBorderWidth /
 // OutlineColor / OutlineCornerRadius / OutlineFillOpacity /
 // OutlineAnimationDuration).
 Item {
@@ -25,7 +25,7 @@ Item {
     property real fillOpacity: 0
     property int animationDuration: 0
 
-    // Window-local target rect for the highlighted area. LoopLiteEffect
+    // Window-local target rect for the highlighted area. SirkelEffect
     // resets this to a zero-size rect at the target screen's center (while
     // still hidden) at the start of every session, so the very first
     // direction picked grows out from the middle rather than gliding in

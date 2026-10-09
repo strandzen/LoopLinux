@@ -1,5 +1,5 @@
 {
-    "X-KDE-ConfigModule": "kwin_effect_loop_lite_config",
+    "X-KDE-ConfigModule": "kwin_effect_sirkel_config",
     "KPlugin": {
         "Authors": [
             {
@@ -10,8 +10,8 @@
         "Category": "Window Management",
         "Description": "Loop-style directional window snapping: hold the hyperkey, move the mouse to pick a direction, release to snap.",
         "EnabledByDefault": false,
-        "Id": "loop-lite",
+        "Id": "sirkel",
         "License": "GPL-2.0-or-later",
-        "Name": "Loop Lite"
+        "Name": "Sirkel"
     }
 }

@@ -1,5 +1,5 @@
-File=loopliteconfig.kcfg
-ClassName=LoopLiteConfig
+File=sirkelconfig.kcfg
+ClassName=SirkelConfig
 Mutators=true
 Singleton=true
 GenerateProperties=true

@@ -37,13 +37,13 @@ struct PointerMotionEvent;
 // a Window.color="transparent" binding had zero visible effect there).
 // Using plain QQuickWindow here is standard public Qt API, not a KWin-
 // specific mechanism, so it carries no linking/ABI risk.
-class LoopLiteEffect : public KWin::Effect
+class SirkelEffect : public KWin::Effect
 {
     Q_OBJECT
 
 public:
-    explicit LoopLiteEffect();
-    ~LoopLiteEffect() override;
+    explicit SirkelEffect();
+    ~SirkelEffect() override;
 
     static bool supported();
     bool isActive() const override;
@@ -79,6 +79,16 @@ private:
     // rect instead of an instant window move/resize — also reused by
     // finish() and actionMaximize() instead of each re-querying it.
     QRectF m_outlineArea;
+    // The indicator's own drawn center on screen for this session (screen
+    // center, or the cursor position at arm() time, per
+    // IndicatorFollowsMouse) — set once in repositionIndicator(). Direction
+    // is picked from the cursor's *current absolute position relative to
+    // this point*, not a running delta accumulated since arm(); otherwise,
+    // whenever the indicator is drawn away from the press point (i.e. it's
+    // centered on the screen, not following the mouse), the hit-testing
+    // would stay anchored to the original press position instead of the
+    // indicator everyone can actually see on screen.
+    QPointF m_indicatorCenter;
     QPointF m_accumulatedDelta;
     SnapDirection m_direction = SnapDirection::None;
     bool m_active = false;

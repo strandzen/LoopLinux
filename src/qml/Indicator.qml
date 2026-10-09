@@ -3,14 +3,14 @@ import QtQuick.Shapes
 
 // Center direction indicator: a static ring (square frame at cornerRadius 0,
 // full circle at cornerRadius >= width/2 — see
-// LoopLiteConfig::IndicatorCornerRadius) with a single marker that slides
+// SirkelConfig::IndicatorCornerRadius) with a single marker that slides
 // *along the ring's own boundary curve* to the currently selected
 // direction — not a straight-line (chord-cutting) tween between two points,
 // and not rotating around the center. Sized to the ring's thickness so it
 // always sits pixel-fit inside it (Todo.md's "Other Notes" #8). Lives in
-// its own small, fully transparent QQuickWindow (see LoopLiteEffect) so the
+// its own small, fully transparent QQuickWindow (see SirkelEffect) so the
 // shape's rounded/square edges don't show a black background. All style
-// properties are pushed from LoopLiteEffect::applyIndicatorStyle().
+// properties are pushed from SirkelEffect::applyIndicatorStyle().
 Item {
     id: root
     anchors.fill: parent
@@ -22,7 +22,7 @@ Item {
     property bool showText: true
     property color highlightColor: "#3daee9"
     // Shared with Outline.qml's own glide/resize animation (both are driven
-    // by LoopLiteConfig::OutlineAnimationDuration) — 0 means every change
+    // by SirkelConfig::OutlineAnimationDuration) — 0 means every change
     // below is instant, matching the original behavior.
     property int animationDuration: 0
 

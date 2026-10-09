@@ -5,14 +5,14 @@
 #include <QColor>
 #include <QStringList>
 
-// System Settings page for Loop Lite, under Desktop Effects' configure
+// System Settings page for Sirkel, under Desktop Effects' configure
 // button for the effect (wired via metadata.json's X-KDE-ConfigModule).
 // Every property here is a thin, uncached read/write pass-through to
-// LoopLiteConfig::self() — "instant apply" (writes + saves immediately on
+// SirkelConfig::self() — "instant apply" (writes + saves immediately on
 // change), per the documented KQuickConfigModule pattern of exposing
 // settings as plain properties on the module itself, accessed from QML via
 // the framework-provided "kcm" object.
-class LoopLiteConfigModule : public KQuickConfigModule
+class SirkelConfigModule : public KQuickConfigModule
 {
     Q_OBJECT
 
@@ -37,7 +37,7 @@ class LoopLiteConfigModule : public KQuickConfigModule
     Q_PROPERTY(bool indicatorFollowsMouse READ indicatorFollowsMouse WRITE setIndicatorFollowsMouse NOTIFY settingsChanged)
 
 public:
-    explicit LoopLiteConfigModule(QObject *parent, const KPluginMetaData &metaData);
+    explicit SirkelConfigModule(QObject *parent, const KPluginMetaData &metaData);
 
     int horizontalDeadzone() const;
     void setHorizontalDeadzone(int value);

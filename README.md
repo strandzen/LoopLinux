@@ -1,22 +1,24 @@
-# Loop Lite
+# Sirkel
 
 A [Loop](https://github.com/MrKai77/Loop)-inspired directional window snapping tool for KDE Plasma 6.7+ / KWin.
 
-Hold a hyperkey (Caps Lock, remapped to F24), drag the mouse or press a direction key to pick where the active window should go, release to snap it there — left/right halves, top/bottom halves, or one of the four quarter corners, previewed live with an on-screen outline and a direction indicator.
+Hold a hyperkey (Caps Lock, remapped to F24), drag the mouse or press a direction key to pick where the active window should go, release to snap it there - left/right halves, top/bottom halves, or one of the four quarter corners, previewed live with an on-screen outline and a direction indicator.
 
 ## Features
 
 - Hold-and-drag or hold-and-press-a-key directional snapping to 8 positions (halves + corners), with live outline and indicator previews
-- Direction selection is sticky — once picked, relaxing the mouse or releasing the keys doesn't cancel it; only picking a different direction changes it
-- Arrow keys, WASD, or HJKL for direction (configurable preset), including combining two keys (e.g. Up+Left) for a corner
+- Direction selection is sticky - once picked, relaxing the mouse or releasing the keys doesn't cancel it; only picking a different direction changes it
+- Holding the hyperkey alone does nothing - the indicator only appears once you actually move the mouse or press a direction key, so a reflexive tap never triggers anything
+- Resting the cursor at the indicator's own center maximizes the window instead - a live zone just like the other 8 directions, with its own padding applied
+- Arrow keys, WASD, or HJKL for direction (configurable preset), including combining two keys (e.g. Up+Left) for a corner - or disable direction keys entirely for mouse-only use
 - Hyperkey+Enter maximizes, Hyperkey+Backspace minimizes
 - Esc, or releasing with no direction chosen, cancels cleanly
-- Extensive settings page (System Settings → Desktop Effects → Loop Lite): mouse deadzone, window padding, indicator size/position/corner radius/ring thickness/color, outline border thickness/corner radius/color, keybind scheme
+- Extensive, tabbed settings page (System Settings → Desktop Effects → Sirkel): Behavior, Indicator, Outline, and Colors each on their own tab
 
 ## Requirements
 
 - KDE Plasma 6.7+ (KWin with the Wayland session)
-- [keyd](https://github.com/rvaiya/keyd) — hard dependency, used to remap Caps Lock to F24 at the input level
+- [keyd](https://github.com/rvaiya/keyd) - hard dependency, used to remap Caps Lock to F24 at the input level
 - Build dependencies: CMake, Extra CMake Modules (ECM), Qt6 (Core, Gui, Qml, Quick, DBus), KDE Frameworks 6 (Config, CoreAddons, GlobalAccel, KCMUtils), and KWin's own development headers
 
 ## Installation
@@ -56,65 +58,69 @@ This installs both the KWin effect itself and its System Settings configuration 
 
 ### 3. Enable the effect
 
-Open **System Settings → Desktop Effects**, find **Loop Lite**, and enable it.
+Open **System Settings → Desktop Effects**, find **Sirkel**, and enable it.
 
 ## Usage
 
 1. Hold Caps Lock (F24).
-2. Move the mouse toward an edge or corner, or press an arrow key (or WASD/HJKL, depending on the configured scheme) — the direction indicator and a preview outline show the current pick.
+2. Move the mouse toward an edge or corner, or press an arrow key (or WASD/HJKL, depending on the configured scheme) - the direction indicator and a preview outline show the current pick.
 3. Release Caps Lock to snap the active window there, on its own screen (windows never move across monitors).
 
 While held:
-- **Enter** — maximize
-- **Backspace** — minimize
-- **Esc**, or releasing with no direction picked — cancel without moving the window
+- **Enter**, or resting the cursor at the indicator's own center - maximize
+- **Backspace** - minimize
+- **Esc**, or releasing with no direction picked - cancel without moving the window
 
 ## Configuration
 
-All settings live in **System Settings → Desktop Effects → Loop Lite** (the configure/gear icon next to the effect): mouse deadzone (horizontal/vertical), window padding, indicator appearance (visibility, spawn-at-cursor vs. centered, size, corner radius, ring thickness, text, color), outline appearance (visibility, border thickness, corner radius, color), and the keybind scheme (arrows/WASD/HJKL).
+All settings live in **System Settings → Desktop Effects → Sirkel** (the configure/gear icon next to the effect), across four tabs:
+- **Behavior** - mouse deadzone (horizontal/vertical), window padding, keybind scheme (arrows/WASD/HJKL/none)
+- **Indicator** - visibility, spawn-at-cursor vs. centered, size, corner radius, ring thickness, pointer length, text label
+- **Outline** - visibility, border thickness, corner radius, fill opacity, glide/grow animation speed
+- **Colors** - a custom color picker (hex, or individual R/G/B/A sliders) plus quick-pick swatches sourced live from the current Plasma color scheme
 
-Settings changes take effect automatically the next time you hold the hyperkey — no need to log out or restart the effect.
+Settings changes take effect automatically the next time you hold the hyperkey - no need to log out or restart the effect.
 
 ## Known limitations
 
-- Only one window is placed at a time — no multi-window "thirds" layouts yet
-- Keybind schemes are fixed presets (arrows / WASD / HJKL), not arbitrary rebinding
+- Only one window is placed at a time - no multi-window "thirds" layouts yet
+- Keybind schemes are fixed presets (arrows / WASD / HJKL / none), not arbitrary rebinding
 - Snapping doesn't move a window to a different monitor
 
 ## Comparison with Loop
 
-How Loop Lite stacks up against [Loop](https://github.com/MrKai77/Loop), the macOS app it's inspired by.
+How Sirkel stacks up against [Loop](https://github.com/MrKai77/Loop), the macOS app it's inspired by.
 
-| Feature | Loop | Loop Lite |
+| Feature | Loop | Sirkel |
 |---|---|---|
 | Radial menu (hold key, drag mouse, release to snap) | ✅ | ✅ |
-| Preview window before committing | ✅ | ✅ (Outline) |
+| Preview window before committing | ✅ | ✅ |
 | Modifier + arrow keys | ✅ | ✅ |
 | Modifier + mouse | ✅ | ✅ |
 | Halves & quarters | ✅ | ✅ |
 | Padding/margins | ✅ | ✅ |
-| Radial menu theming (width/shape/color) | ✅ | ✅ (ring width, corner radius, color) |
-| Preview theming (padding, corner radius, border color/width) | ✅ | ✅ (+ fill opacity) |
+| Radial menu theming (width/shape/color) | ✅ | ✅  |
+| Preview theming (padding, corner radius, border color/width) | ✅ | ✅ 
 | Indicator/preview independently toggleable | ✅ | ✅ |
-| Maximize / center gesture | ✅ | ✅ |
+| Maximize / center gesture | ✅ | ⏳ |
 | Thirds (horizontal/vertical, two-thirds variants) | ✅ | ❌ |
 | Per-action custom keybinds (any key → any specific action) | ✅ | ❌ |
 | Cycles (repeated press/click cycles through size variants) | ✅ | ❌ |
 | Stash (hide windows at screen edge, reveal on hover) | ✅ | ❌ |
 | Granular manipulation (Larger/Smaller, Grow/Shrink per edge, nudge) | ✅ | ❌ |
 | Undo last action | ✅ | ❌ |
-| Restore initial frame (snap back to pre-Loop geometry) | ✅ | ❌ |
+| Restore initial frame (snap back to pre-Sirkel geometry) | ✅ | ❌ |
 | Screen switching (move window to an adjacent monitor) | ✅ | ❌ |
 | Almost Maximize / Centre as distinct actions | ✅ | ❌ |
 | Snap via drag-to-edge (no hyperkey needed) | ✅ | ❌ |
-| Separate colors for indicator vs. outline | Implied | ❌ (one shared color) |
+| Separate colors for indicator vs. outline | ✅  | ❌ |
 
 ## Roadmap
 
-- **Custom keybinds** — real per-action global shortcuts via `System Settings → Shortcuts` (maximize, minimize, each directional snap, and more), replacing the current fixed arrows/WASD/HJKL preset dropdown
-- **Thirds** — horizontal and vertical third/two-thirds placements, not just halves and quarters
-- **Cycles** — repeatedly pressing/clicking the same direction cycles the window through a small set of size variants (e.g. half → two-thirds → third) instead of re-picking the same geometry
-- **Screen switching** — move the active window to an adjacent monitor
+- **Custom keybinds** - real per-action global shortcuts via `System Settings → Shortcuts` (maximize, minimize, each directional snap, and more), replacing the current fixed arrows/WASD/HJKL preset dropdown
+- **Thirds** - horizontal and vertical third/two-thirds placements, not just halves and quarters
+- **Cycles** - repeatedly pressing/clicking the same direction cycles the window through a small set of size variants (e.g. half → two-thirds → third) instead of re-picking the same geometry
+- **Screen switching** - move the active window to an adjacent monitor
 
 ## License
 

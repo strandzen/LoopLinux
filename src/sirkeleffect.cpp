@@ -1,5 +1,5 @@
-#include "loopliteeffect.h"
-#include "loopliteconfig.h"
+#include "sirkeleffect.h"
+#include "sirkelconfig.h"
 
 #include <effect/effecthandler.h>
 #include <effect/effectwindow.h>
@@ -9,22 +9,43 @@
 #include <window.h>
 
 #include <KConfig>
+#include <KConfigGroup>
 #include <KGlobalAccel>
 
 #include <QAction>
+#include <QGuiApplication>
 #include <QHash>
 #include <QKeyEvent>
 #include <QLoggingCategory>
+#include <QPalette>
 #include <QQuickItem>
 #include <QQuickView>
 #include <QUrl>
 
 #include <array>
 
-Q_LOGGING_CATEGORY(LOOP_LITE, "loop.lite")
+Q_LOGGING_CATEGORY(SIRKEL, "sirkel")
 
 namespace
 {
+// OutlineColor's own kcfg default is just a static fallback color, not a
+// live "theme accent" — KConfigXT has no way to express that in the .kcfg
+// itself. So: on a fresh install, nothing has ever been written to the
+// "OutlineColor" key under kwinrc's [Effect-sirkel] group at all (checking
+// that directly, rather than comparing against the static default value,
+// correctly distinguishes "never customized" from "customized to the same
+// value the default happens to have"). While that's true, use the live
+// Plasma accent/highlight color instead of the static fallback; once the
+// user picks any color via the KCM, this key exists and that choice sticks.
+QColor resolveOutlineColor()
+{
+    const bool hasCustomColor = SirkelConfig::self()->config()->group(QStringLiteral("Effect-sirkel")).hasKey(QStringLiteral("OutlineColor"));
+    if (!hasCustomColor) {
+        return QGuiApplication::palette().color(QPalette::Highlight);
+    }
+    return SirkelConfig::outlineColor();
+}
+
 std::unique_ptr<QQuickView> makeOverlayWindow(const QUrl &source)
 {
     auto view = std::make_unique<QQuickView>(source);
@@ -49,6 +70,12 @@ struct KeyBinding {
 // KeybindScheme setting (KCM: a scheme dropdown, not arbitrary rebinding).
 KeyAxis axisForArmedKey(int key, const QString &scheme)
 {
+    // "none" means mouse-only: no direction key bindings at all, rather
+    // than falling back to the "arrows" default below.
+    if (scheme == QStringLiteral("none")) {
+        return KeyAxis::None;
+    }
+
     static const QHash<QString, std::array<KeyBinding, 4>> kSchemes{
         {QStringLiteral("arrows"),
          {{{Qt::Key_Left, KeyAxis::Left}, {Qt::Key_Right, KeyAxis::Right}, {Qt::Key_Up, KeyAxis::Up}, {Qt::Key_Down, KeyAxis::Down}}}},
@@ -92,48 +119,48 @@ SnapDirection composeDirection(bool up, bool down, bool left, bool right)
 }
 }
 
-LoopLiteEffect::LoopLiteEffect()
+SirkelEffect::SirkelEffect()
     : m_outline(makeOverlayWindow(QUrl(QStringLiteral("qrc:/qml/Outline.qml"))))
     , m_indicator(makeOverlayWindow(QUrl(QStringLiteral("qrc:/qml/Indicator.qml"))))
 {
     m_toggleAction = new QAction(this);
-    m_toggleAction->setObjectName(QStringLiteral("LoopLiteSnap"));
-    m_toggleAction->setText(QStringLiteral("Loop Lite: hold to snap window"));
+    m_toggleAction->setObjectName(QStringLiteral("SirkelSnap"));
+    m_toggleAction->setText(QStringLiteral("Sirkel: hold to snap window"));
     KGlobalAccel::self()->setDefaultShortcut(m_toggleAction, {QKeySequence(Qt::Key_F24)});
     KGlobalAccel::self()->setShortcut(m_toggleAction, {QKeySequence(Qt::Key_F24)});
-    connect(m_toggleAction, &QAction::triggered, this, &LoopLiteEffect::arm);
+    connect(m_toggleAction, &QAction::triggered, this, &SirkelEffect::arm);
 
-    qCWarning(LOOP_LITE) << "constructed, build marker rev5-qquickview";
+    qCWarning(SIRKEL) << "constructed, build marker rev5-qquickview";
 }
 
-LoopLiteEffect::~LoopLiteEffect() = default;
+SirkelEffect::~SirkelEffect() = default;
 
-bool LoopLiteEffect::supported()
+bool SirkelEffect::supported()
 {
     return KWin::effects->isOpenGLCompositing();
 }
 
-bool LoopLiteEffect::isActive() const
+bool SirkelEffect::isActive() const
 {
     return m_active;
 }
 
-void LoopLiteEffect::reconfigure(ReconfigureFlags flags)
+void SirkelEffect::reconfigure(ReconfigureFlags flags)
 {
     Q_UNUSED(flags)
     // The KCM runs in a separate process (System Settings/kcmshell6) with
-    // its own LoopLiteConfig::self() instance; it writes to the same
+    // its own SirkelConfig::self() instance; it writes to the same
     // kwinrc, but our already-running copy never re-reads the file on its
     // own. reparseConfiguration() forces KConfig to re-read from disk, then
     // load() repopulates the skeleton's cached values from it — without
     // this, settings changed in the KCM would silently keep using whatever
-    // was cached from when this effect's LoopLiteConfig was first touched.
-    LoopLiteConfig::self()->config()->reparseConfiguration();
-    LoopLiteConfig::self()->load();
-    qCWarning(LOOP_LITE) << "reconfigure(): config reloaded";
+    // was cached from when this effect's SirkelConfig was first touched.
+    SirkelConfig::self()->config()->reparseConfiguration();
+    SirkelConfig::self()->load();
+    qCWarning(SIRKEL) << "reconfigure(): config reloaded";
 }
 
-void LoopLiteEffect::arm()
+void SirkelEffect::arm()
 {
     if (m_targetWindow) {
         // F24 auto-repeats at the OS level while held; ignore re-entrant
@@ -141,7 +168,7 @@ void LoopLiteEffect::arm()
         return;
     }
 
-    // LoopLiteConfig::self() is a process-wide singleton, independent of
+    // SirkelConfig::self() is a process-wide singleton, independent of
     // this Effect object's own lifecycle — toggling the effect off/on in
     // Desktop Effects destroys and recreates the Effect, but calls into
     // the exact same (still stale) config singleton either way, so that
@@ -150,13 +177,13 @@ void LoopLiteEffect::arm()
     // fresh read from disk unconditionally on every arm() — cheap (a small
     // ini file), and guarantees up-to-date settings on every hyperkey
     // press regardless of what did or didn't notify us.
-    LoopLiteConfig::self()->config()->reparseConfiguration();
-    LoopLiteConfig::self()->load();
+    SirkelConfig::self()->config()->reparseConfiguration();
+    SirkelConfig::self()->load();
 
-    qCWarning(LOOP_LITE) << "arm() called";
+    qCWarning(SIRKEL) << "arm() called";
     m_targetWindow = KWin::effects->activeWindow();
     if (!m_targetWindow) {
-        qCWarning(LOOP_LITE) << "arm(): no active window, aborting";
+        qCWarning(SIRKEL) << "arm(): no active window, aborting";
         return;
     }
     if (m_targetWindow->isSpecialWindow()) {
@@ -167,7 +194,7 @@ void LoopLiteEffect::arm()
         // to be. isSpecialWindow() covers the desktop, docks/panels, and
         // similar window types that aren't meant to be moved/resized at
         // all, so refuse to arm against any of them.
-        qCWarning(LOOP_LITE) << "arm(): active window is a special window (desktop/panel/etc), aborting";
+        qCWarning(SIRKEL) << "arm(): active window is a special window (desktop/panel/etc), aborting";
         m_targetWindow = nullptr;
         return;
     }
@@ -211,20 +238,20 @@ void LoopLiteEffect::arm()
     KWin::effects->startMouseInterception(this, Qt::CrossCursor);
 }
 
-void LoopLiteEffect::engage()
+void SirkelEffect::engage()
 {
     if (m_engaged) {
         return;
     }
     m_engaged = true;
-    if (m_targetScreen && LoopLiteConfig::showIndicator()) {
+    if (m_targetScreen && SirkelConfig::showIndicator()) {
         m_indicator->show();
     }
 }
 
-void LoopLiteEffect::finish(bool applyPendingDirection)
+void SirkelEffect::finish(bool applyPendingDirection)
 {
-    qCWarning(LOOP_LITE) << "finish() applyPendingDirection=" << applyPendingDirection
+    qCWarning(SIRKEL) << "finish() applyPendingDirection=" << applyPendingDirection
                           << "m_direction=" << snapDirectionName(m_direction);
     KWin::effects->stopMouseInterception(this);
     KWin::effects->ungrabKeyboard();
@@ -233,16 +260,16 @@ void LoopLiteEffect::finish(bool applyPendingDirection)
     m_active = false;
 
     if (applyPendingDirection && m_targetWindow && m_direction != SnapDirection::None) {
-        const QRectF target = snapTargetGeometry(m_direction, m_outlineArea, LoopLiteConfig::paddingHorizontal(), LoopLiteConfig::paddingVertical());
+        const QRectF target = snapTargetGeometry(m_direction, m_outlineArea, SirkelConfig::paddingHorizontal(), SirkelConfig::paddingVertical());
         if (KWin::Window *window = m_targetWindow->window()) {
             window->setMaximize(false, false);
             window->moveResize(target);
-            qCWarning(LOOP_LITE) << "finish(): moveResize done, target=" << target;
+            qCWarning(SIRKEL) << "finish(): moveResize done, target=" << target;
         } else {
-            qCWarning(LOOP_LITE) << "finish(): m_targetWindow->window() was null!";
+            qCWarning(SIRKEL) << "finish(): m_targetWindow->window() was null!";
         }
     } else {
-        qCWarning(LOOP_LITE) << "finish(): no snap applied (applyPendingDirection=" << applyPendingDirection
+        qCWarning(SIRKEL) << "finish(): no snap applied (applyPendingDirection=" << applyPendingDirection
                               << "m_targetWindow=" << m_targetWindow << "m_direction=" << snapDirectionName(m_direction) << ")";
     }
 
@@ -253,12 +280,12 @@ void LoopLiteEffect::finish(bool applyPendingDirection)
     m_engaged = false;
 }
 
-void LoopLiteEffect::setDirection(SnapDirection direction)
+void SirkelEffect::setDirection(SnapDirection direction)
 {
     if (direction == m_direction) {
         return;
     }
-    qCWarning(LOOP_LITE) << "setDirection():" << snapDirectionName(m_direction) << "->" << snapDirectionName(direction);
+    qCWarning(SIRKEL) << "setDirection():" << snapDirectionName(m_direction) << "->" << snapDirectionName(direction);
     m_direction = direction;
 
     if (QQuickItem *root = m_indicator->rootObject()) {
@@ -274,7 +301,7 @@ void LoopLiteEffect::setDirection(SnapDirection direction)
     // the whole session — only the highlighted rect inside it moves, in
     // window-local coordinates, so QML's Behavior animations can glide/grow
     // it between directions instead of an instant window move+resize.
-    const QRectF target = snapTargetGeometry(m_direction, m_outlineArea, LoopLiteConfig::paddingHorizontal(), LoopLiteConfig::paddingVertical());
+    const QRectF target = snapTargetGeometry(m_direction, m_outlineArea, SirkelConfig::paddingHorizontal(), SirkelConfig::paddingVertical());
     if (QQuickItem *root = m_outline->rootObject()) {
         const QRectF local = target.translated(-m_outlineArea.topLeft());
         root->setProperty("targetX", local.x());
@@ -282,14 +309,14 @@ void LoopLiteEffect::setDirection(SnapDirection direction)
         root->setProperty("targetWidth", local.width());
         root->setProperty("targetHeight", local.height());
     }
-    if (LoopLiteConfig::showOutline()) {
+    if (SirkelConfig::showOutline()) {
         m_outline->show();
     }
 }
 
-void LoopLiteEffect::updateDirectionFromPointer()
+void SirkelEffect::updateDirectionFromPointer()
 {
-    const SnapDirection candidate = snapDirectionForDelta(m_accumulatedDelta, LoopLiteConfig::horizontalDeadzone(), LoopLiteConfig::verticalDeadzone());
+    const SnapDirection candidate = snapDirectionForDelta(m_accumulatedDelta, SirkelConfig::horizontalDeadzone(), SirkelConfig::verticalDeadzone());
     // The center deadzone is itself a live zone (the maximize gesture), not
     // a "no selection yet" state — so unlike the 8 edge/corner directions,
     // returning to center always re-selects it, even after a real direction
@@ -299,7 +326,7 @@ void LoopLiteEffect::updateDirectionFromPointer()
     setDirection(candidate == SnapDirection::None ? SnapDirection::Maximize : candidate);
 }
 
-void LoopLiteEffect::repositionIndicator()
+void SirkelEffect::repositionIndicator()
 {
     if (!m_targetScreen) {
         return;
@@ -307,35 +334,38 @@ void LoopLiteEffect::repositionIndicator()
     // Called once at arm() time: either centered on screen, or spawned at
     // wherever the cursor happened to be when the hyperkey was pressed (not
     // live-tracked afterward — confirmed that's the intended behavior).
-    const QPointF center = LoopLiteConfig::indicatorFollowsMouse() ? KWin::effects->cursorPos() : m_targetScreen->geometryF().center();
-    const int size = LoopLiteConfig::indicatorSize();
-    const QRect indicatorGeometry(QPoint(qRound(center.x() - size / 2.0), qRound(center.y() - size / 2.0)), QSize(size, size));
+    // Stored in m_indicatorCenter too: direction hit-testing is anchored to
+    // this same point, so it always matches what's actually drawn on screen.
+    m_indicatorCenter = SirkelConfig::indicatorFollowsMouse() ? KWin::effects->cursorPos() : m_targetScreen->geometryF().center();
+    const int size = SirkelConfig::indicatorSize();
+    const QRect indicatorGeometry(QPoint(qRound(m_indicatorCenter.x() - size / 2.0), qRound(m_indicatorCenter.y() - size / 2.0)), QSize(size, size));
     m_indicator->setGeometry(indicatorGeometry);
 }
 
-void LoopLiteEffect::applyIndicatorStyle()
+void SirkelEffect::applyIndicatorStyle()
 {
     // Read fresh each time a session arms, rather than reacting live to
     // config changes mid-session — settings changed in the KCM take effect
-    // the next time Loop Lite is triggered.
+    // the next time Sirkel is triggered.
+    const QColor outlineColor = resolveOutlineColor();
     if (QQuickItem *root = m_indicator->rootObject()) {
-        root->setProperty("cornerRadius", LoopLiteConfig::indicatorCornerRadius());
-        root->setProperty("ringWidth", LoopLiteConfig::indicatorRingWidth());
-        root->setProperty("pointerLength", LoopLiteConfig::indicatorPointerLength());
-        root->setProperty("showText", LoopLiteConfig::showIndicatorText());
-        root->setProperty("highlightColor", LoopLiteConfig::outlineColor());
-        root->setProperty("animationDuration", LoopLiteConfig::outlineAnimationDuration());
+        root->setProperty("cornerRadius", SirkelConfig::indicatorCornerRadius());
+        root->setProperty("ringWidth", SirkelConfig::indicatorRingWidth());
+        root->setProperty("pointerLength", SirkelConfig::indicatorPointerLength());
+        root->setProperty("showText", SirkelConfig::showIndicatorText());
+        root->setProperty("highlightColor", outlineColor);
+        root->setProperty("animationDuration", SirkelConfig::outlineAnimationDuration());
     }
     if (QQuickItem *root = m_outline->rootObject()) {
-        root->setProperty("borderWidth", LoopLiteConfig::outlineBorderWidth());
-        root->setProperty("borderColor", LoopLiteConfig::outlineColor());
-        root->setProperty("cornerRadius", LoopLiteConfig::outlineCornerRadius());
-        root->setProperty("fillOpacity", LoopLiteConfig::outlineFillOpacity());
-        root->setProperty("animationDuration", LoopLiteConfig::outlineAnimationDuration());
+        root->setProperty("borderWidth", SirkelConfig::outlineBorderWidth());
+        root->setProperty("borderColor", outlineColor);
+        root->setProperty("cornerRadius", SirkelConfig::outlineCornerRadius());
+        root->setProperty("fillOpacity", SirkelConfig::outlineFillOpacity());
+        root->setProperty("animationDuration", SirkelConfig::outlineAnimationDuration());
     }
 }
 
-void LoopLiteEffect::actionMaximize()
+void SirkelEffect::actionMaximize()
 {
     if (!m_targetWindow || !m_targetScreen) {
         return;
@@ -345,35 +375,35 @@ void LoopLiteEffect::actionMaximize()
         // (rather than window->setMaximize(true, true), which bypasses
         // padding entirely) so Hyperkey+Enter and the center/maximize
         // gesture both respect PaddingHorizontal/PaddingVertical.
-        const QRectF target = snapTargetGeometry(SnapDirection::Maximize, m_outlineArea, LoopLiteConfig::paddingHorizontal(), LoopLiteConfig::paddingVertical());
+        const QRectF target = snapTargetGeometry(SnapDirection::Maximize, m_outlineArea, SirkelConfig::paddingHorizontal(), SirkelConfig::paddingVertical());
         window->setMaximize(false, false);
         window->moveResize(target);
     }
 }
 
-void LoopLiteEffect::actionMinimize()
+void SirkelEffect::actionMinimize()
 {
     if (m_targetWindow) {
         m_targetWindow->setMinimized(true);
     }
 }
 
-void LoopLiteEffect::grabbedKeyboardEvent(QKeyEvent *event)
+void SirkelEffect::grabbedKeyboardEvent(QKeyEvent *event)
 {
     // Hyperkey+<key> bindings available while armed. Add a row here to
     // extend — the action fires immediately and ends the session without
     // applying a directional snap.
-    static const QHash<int, void (LoopLiteEffect::*)()> keyActions{
-        {Qt::Key_Return, &LoopLiteEffect::actionMaximize},
-        {Qt::Key_Enter, &LoopLiteEffect::actionMaximize},
-        {Qt::Key_Backspace, &LoopLiteEffect::actionMinimize},
+    static const QHash<int, void (SirkelEffect::*)()> keyActions{
+        {Qt::Key_Return, &SirkelEffect::actionMaximize},
+        {Qt::Key_Enter, &SirkelEffect::actionMaximize},
+        {Qt::Key_Backspace, &SirkelEffect::actionMinimize},
     };
 
     // The configured key scheme (arrows/WASD/HJKL) sets the placement
     // directly. Both press and release are tracked so holding two keys at
     // once (e.g. Up+Left) composes a corner instead of only the latest key
     // winning.
-    const KeyAxis axis = axisForArmedKey(event->key(), LoopLiteConfig::keybindScheme());
+    const KeyAxis axis = axisForArmedKey(event->key(), SirkelConfig::keybindScheme());
     if (axis != KeyAxis::None && (event->type() == QEvent::KeyPress || event->type() == QEvent::KeyRelease)) {
         engage();
         const bool pressed = (event->type() == QEvent::KeyPress);
@@ -421,13 +451,20 @@ void LoopLiteEffect::grabbedKeyboardEvent(QKeyEvent *event)
     }
 }
 
-void LoopLiteEffect::pointerMotion(KWin::PointerMotionEvent *event)
+void SirkelEffect::pointerMotion(KWin::PointerMotionEvent *event)
 {
     engage();
-    m_accumulatedDelta += event->delta;
+    // Absolute cursor position relative to the indicator's own drawn
+    // center, recomputed fresh every time — not a running sum of each
+    // event's relative delta since arm(). A pure delta-accumulator is
+    // anchored to wherever the cursor physically was at the press, which
+    // silently drifts away from the visible indicator whenever it's drawn
+    // somewhere else (i.e. IndicatorFollowsMouse is off and the press
+    // didn't happen to land exactly on the screen's center).
+    m_accumulatedDelta = event->position - m_indicatorCenter;
     updateDirectionFromPointer();
 }
 
-KWIN_EFFECT_FACTORY(LoopLiteEffect, "metadata.json")
+KWIN_EFFECT_FACTORY(SirkelEffect, "metadata.json")
 
-#include "loopliteeffect.moc"
+#include "sirkeleffect.moc"
