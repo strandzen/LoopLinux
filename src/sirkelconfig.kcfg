@@ -60,22 +60,32 @@
     <entry name="OutlineFillOpacity" type="Int">
       <default>20</default>
     </entry>
+    <!-- Whether the desktop behind the fill is blurred (via KWin's own
+         Blur effect, KWindowEffects::enableBlurBehind() — a no-op if the
+         user doesn't have Blur enabled in Desktop Effects). There's no
+         separate "how much" setting: the blur radius itself is a single
+         compositor-wide value KWin doesn't expose per-window at all, so
+         OutlineFillOpacity above is what actually controls how much of it
+         shows through versus the flat fill color once this is on. -->
+    <entry name="OutlineBlur" type="Bool">
+      <default>false</default>
+    </entry>
     <!-- How long (ms) the target-outline preview takes to glide/resize
          between directions. 0 = instant (snaps straight to the new
          position/size, the original behavior). -->
     <entry name="OutlineAnimationDuration" type="Int">
       <default>75</default>
     </entry>
-    <!-- Border/highlight color of the target-outline preview and the
-         selected segment of the center indicator ring. Alpha channel is
-         respected (KConfig's Color type round-trips it natively). This
-         static fallback is effectively never seen in practice: as long as
-         no value has ever been explicitly saved (checked via
-         config()->group(...).hasKey("OutlineColor"), not this default),
-         SirkelEffect::applyIndicatorStyle() and
-         SirkelConfigModule::outlineColor() both substitute the live theme
-         accent color (QGuiApplication::palette().color(QPalette::Highlight))
-         instead — see resolveOutlineColor() in each. -->
+    <!-- Manually-picked color for the target-outline preview (and, when
+         LinkIndicatorOutlineColor is true, the indicator too), used when
+         OutlineColorSource is "manual". Alpha channel is respected
+         (KConfig's Color type round-trips it natively). This static
+         default is effectively never seen in practice: OutlineColorSource
+         defaults to "theme", which resolves to the live Plasma accent
+         color instead — see resolveColor() in sirkeleffect.cpp /
+         sirkelconfigmodule.cpp. Picking any color via the KCM (a swatch or
+         the custom picker) sets OutlineColorSource to "manual" and stores
+         the picked value here. -->
     <entry name="OutlineColor" type="Color">
       <default>61,174,233</default>
     </entry>
@@ -95,6 +105,61 @@
          instead of staying fixed at the screen's center. -->
     <entry name="IndicatorFollowsMouse" type="Bool">
       <default>false</default>
+    </entry>
+    <!-- Manually-picked color for the center indicator ring, used when
+         IndicatorColorSource is "manual". Independent of OutlineColor
+         unless LinkIndicatorOutlineColor is true. -->
+    <entry name="IndicatorColor" type="Color">
+      <default>61,174,233</default>
+    </entry>
+    <!-- Where the outline's color comes from: "manual" (OutlineColor, set
+         via the KCM's picker), "theme" (the live Plasma accent color,
+         re-resolved every time — see resolveColor() in sirkeleffect.cpp /
+         sirkelconfigmodule.cpp), or "wallpaper" (WallpaperColorPath). -->
+    <entry name="OutlineColorSource" type="String">
+      <default>theme</default>
+    </entry>
+    <!-- Same as OutlineColorSource, for the indicator. Ignored when
+         LinkIndicatorOutlineColor is true (the indicator just follows
+         whatever the outline resolves to). -->
+    <entry name="IndicatorColorSource" type="String">
+      <default>theme</default>
+    </entry>
+    <!-- Whether the indicator uses its own color independently, or always
+         matches the outline's (the original, simpler behavior). -->
+    <entry name="LinkIndicatorOutlineColor" type="Bool">
+      <default>true</default>
+    </entry>
+    <!-- Where to read a wallpaper-derived color from, when a color's source
+         is "wallpaper". Empty (the default) means: use pywal's own default
+         output, ~/.cache/wal/colors.json (colors.color1), no setup needed
+         beyond having pywal installed and having run it at least once. A
+         non-empty path is instead read as a single plain hex color
+         (#RRGGBB or #RRGGBBAA) — the generic mechanism that also covers
+         matugen (point one of its templates at this file) or anything
+         else that can write out a plain hex color. -->
+    <entry name="WallpaperColorPath" type="String">
+      <default></default>
+    </entry>
+    <!-- Whether the directional snap/preview happens on the screen the
+         cursor is on when the hyperkey is pressed, instead of always the
+         active window's current screen. Snapshotted once at arm() time,
+         not tracked live if the cursor crosses monitors mid-drag. -->
+    <entry name="SnapToCursorScreen" type="Bool">
+      <default>false</default>
+    </entry>
+    <!-- How a hyperkey press turns into an armed session: "instant" (arms
+         immediately, the original behavior), "delay" (must be held for
+         TriggerDelay ms before it arms — releasing sooner cancels with no
+         effect), or "doubleclick" (a quick tap-release-tap-and-hold within
+         ~400ms arms it — a single press-and-hold does nothing). -->
+    <entry name="TriggerMode" type="String">
+      <default>instant</default>
+    </entry>
+    <!-- How long (ms) the hyperkey must be held before arming, when
+         TriggerMode is "delay". Ignored for other modes. -->
+    <entry name="TriggerDelay" type="Int">
+      <default>300</default>
     </entry>
   </group>
 </kcfg>

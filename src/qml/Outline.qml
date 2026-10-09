@@ -1,17 +1,20 @@
 import QtQuick
 
-// Preview of where the window will land. Its own window now stays fixed for
-// the whole session, sized/positioned to cover the target screen's entire
-// usable area (set once by SirkelEffect::arm(), via m_outlineArea) — only
-// the inner Rectangle's geometry changes as the direction changes, in
-// window-local coordinates (targetX/Y/Width/Height, pushed by
+// Preview of where the window will land. Fills the shared Overlay.qml
+// window (anchors.fill: parent, same as always — that window stays fixed
+// for the whole session, sized/positioned to cover the target screen's
+// entire usable area, set once by SirkelEffect::arm() via m_outlineArea)
+// — only the inner Rectangle's geometry changes as the direction changes,
+// in window-local coordinates (targetX/Y/Width/Height, pushed by
 // SirkelEffect::setDirection()). That's what lets it glide/grow between
 // directions via ordinary QML Behavior animations instead of an instant
-// window move+resize, which can't be animated the same way. Only the border
-// (and, optionally, a translucent fill inside it) is visible — the live
-// desktop shows through everywhere outside it, and through the inside too
-// when fillOpacity is 0. borderWidth, borderColor, cornerRadius,
-// fillOpacity, and animationDuration are pushed from
+// window move+resize, which can't be animated the same way. Declared
+// before Indicator in Overlay.qml, so Indicator always paints on top of
+// this, not the other way around — see Overlay.qml. Only the border (and,
+// optionally, a translucent fill inside it) is visible — the live desktop
+// shows through everywhere outside it, and through the inside too when
+// fillOpacity is 0. borderWidth, borderColor, cornerRadius, fillOpacity,
+// and animationDuration are pushed from
 // SirkelEffect::applyIndicatorStyle() (SirkelConfig::OutlineBorderWidth /
 // OutlineColor / OutlineCornerRadius / OutlineFillOpacity /
 // OutlineAnimationDuration).

@@ -7,13 +7,14 @@ import QtQuick.Shapes
 // *along the ring's own boundary curve* to the currently selected
 // direction — not a straight-line (chord-cutting) tween between two points,
 // and not rotating around the center. Sized to the ring's thickness so it
-// always sits pixel-fit inside it (Todo.md's "Other Notes" #8). Lives in
-// its own small, fully transparent QQuickWindow (see SirkelEffect) so the
-// shape's rounded/square edges don't show a black background. All style
-// properties are pushed from SirkelEffect::applyIndicatorStyle().
+// always sits pixel-fit inside it (Todo.md's "Other Notes" #8). Positioned
+// as an explicit sub-rect (x/y/width/height, plain Item properties — no
+// anchors.fill here deliberately) within the shared Overlay.qml window, set
+// from SirkelEffect::repositionIndicator(); stacked above Outline by being
+// declared after it there. All style properties are pushed from
+// SirkelEffect::applyIndicatorStyle().
 Item {
     id: root
-    anchors.fill: parent
 
     property string direction: "none"
     property real cornerRadius: 110

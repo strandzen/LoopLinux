@@ -28,13 +28,22 @@ class SirkelConfigModule : public KQuickConfigModule
     Q_PROPERTY(int outlineBorderWidth READ outlineBorderWidth WRITE setOutlineBorderWidth NOTIFY settingsChanged)
     Q_PROPERTY(int outlineCornerRadius READ outlineCornerRadius WRITE setOutlineCornerRadius NOTIFY settingsChanged)
     Q_PROPERTY(QColor outlineColor READ outlineColor WRITE setOutlineColor NOTIFY settingsChanged)
+    Q_PROPERTY(QColor indicatorColor READ indicatorColor WRITE setIndicatorColor NOTIFY settingsChanged)
+    Q_PROPERTY(QString outlineColorSource READ outlineColorSource WRITE setOutlineColorSource NOTIFY settingsChanged)
+    Q_PROPERTY(QString indicatorColorSource READ indicatorColorSource WRITE setIndicatorColorSource NOTIFY settingsChanged)
+    Q_PROPERTY(bool linkIndicatorOutlineColor READ linkIndicatorOutlineColor WRITE setLinkIndicatorOutlineColor NOTIFY settingsChanged)
+    Q_PROPERTY(QString wallpaperColorPath READ wallpaperColorPath WRITE setWallpaperColorPath NOTIFY settingsChanged)
     Q_PROPERTY(int outlineFillOpacity READ outlineFillOpacity WRITE setOutlineFillOpacity NOTIFY settingsChanged)
+    Q_PROPERTY(bool outlineBlur READ outlineBlur WRITE setOutlineBlur NOTIFY settingsChanged)
     Q_PROPERTY(int outlineAnimationDuration READ outlineAnimationDuration WRITE setOutlineAnimationDuration NOTIFY settingsChanged)
     Q_PROPERTY(QString keybindScheme READ keybindScheme WRITE setKeybindScheme NOTIFY settingsChanged)
     Q_PROPERTY(QStringList keybindSchemes READ keybindSchemes CONSTANT)
     Q_PROPERTY(bool showIndicator READ showIndicator WRITE setShowIndicator NOTIFY settingsChanged)
     Q_PROPERTY(bool showOutline READ showOutline WRITE setShowOutline NOTIFY settingsChanged)
     Q_PROPERTY(bool indicatorFollowsMouse READ indicatorFollowsMouse WRITE setIndicatorFollowsMouse NOTIFY settingsChanged)
+    Q_PROPERTY(bool snapToCursorScreen READ snapToCursorScreen WRITE setSnapToCursorScreen NOTIFY settingsChanged)
+    Q_PROPERTY(QString triggerMode READ triggerMode WRITE setTriggerMode NOTIFY settingsChanged)
+    Q_PROPERTY(int triggerDelay READ triggerDelay WRITE setTriggerDelay NOTIFY settingsChanged)
 
 public:
     explicit SirkelConfigModule(QObject *parent, const KPluginMetaData &metaData);
@@ -75,8 +84,26 @@ public:
     QColor outlineColor() const;
     void setOutlineColor(const QColor &value);
 
+    QColor indicatorColor() const;
+    void setIndicatorColor(const QColor &value);
+
+    QString outlineColorSource() const;
+    void setOutlineColorSource(const QString &value);
+
+    QString indicatorColorSource() const;
+    void setIndicatorColorSource(const QString &value);
+
+    bool linkIndicatorOutlineColor() const;
+    void setLinkIndicatorOutlineColor(bool value);
+
+    QString wallpaperColorPath() const;
+    void setWallpaperColorPath(const QString &value);
+
     int outlineFillOpacity() const;
     void setOutlineFillOpacity(int value);
+
+    bool outlineBlur() const;
+    void setOutlineBlur(bool value);
 
     int outlineAnimationDuration() const;
     void setOutlineAnimationDuration(int value);
@@ -95,6 +122,15 @@ public:
 
     bool indicatorFollowsMouse() const;
     void setIndicatorFollowsMouse(bool value);
+
+    bool snapToCursorScreen() const;
+    void setSnapToCursorScreen(bool value);
+
+    QString triggerMode() const;
+    void setTriggerMode(const QString &value);
+
+    int triggerDelay() const;
+    void setTriggerDelay(int value);
 
     void load() override;
     void save() override;

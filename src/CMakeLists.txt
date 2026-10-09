@@ -14,6 +14,7 @@ qt6_add_resources(kwin_effect_sirkel sirkel_qml
     FILES
         qml/Outline.qml
         qml/Indicator.qml
+        qml/Overlay.qml
 )
 
 target_link_libraries(kwin_effect_sirkel PRIVATE
@@ -25,6 +26,7 @@ target_link_libraries(kwin_effect_sirkel PRIVATE
     KF6::ConfigGui
     KF6::CoreAddons
     KF6::GlobalAccel
+    KF6::WindowSystem
     KWin::kwin
 )
 

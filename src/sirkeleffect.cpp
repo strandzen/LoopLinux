@@ -11,15 +11,21 @@
 #include <KConfig>
 #include <KConfigGroup>
 #include <KGlobalAccel>
+#include <KWindowEffects>
 
 #include <QAction>
+#include <QDir>
+#include <QFile>
 #include <QGuiApplication>
 #include <QHash>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QKeyEvent>
 #include <QLoggingCategory>
 #include <QPalette>
 #include <QQuickItem>
 #include <QQuickView>
+#include <QTimer>
 #include <QUrl>
 
 #include <array>
@@ -28,22 +34,52 @@ Q_LOGGING_CATEGORY(SIRKEL, "sirkel")
 
 namespace
 {
-// OutlineColor's own kcfg default is just a static fallback color, not a
-// live "theme accent" — KConfigXT has no way to express that in the .kcfg
-// itself. So: on a fresh install, nothing has ever been written to the
-// "OutlineColor" key under kwinrc's [Effect-sirkel] group at all (checking
-// that directly, rather than comparing against the static default value,
-// correctly distinguishes "never customized" from "customized to the same
-// value the default happens to have"). While that's true, use the live
-// Plasma accent/highlight color instead of the static fallback; once the
-// user picks any color via the KCM, this key exists and that choice sticks.
-QColor resolveOutlineColor()
+// Reads a single wallpaper-derived color, per WallpaperColorPath: pywal's
+// own default output (colors.color1 of ~/.cache/wal/colors.json) when
+// unset, or a user-pointed plain-hex-color file otherwise (covers matugen —
+// point one of its templates here — or anything else that can write out a
+// plain hex color). Returns an invalid QColor if nothing usable was found,
+// so callers can fall back to something that always works.
+QColor readWallpaperColor()
 {
-    const bool hasCustomColor = SirkelConfig::self()->config()->group(QStringLiteral("Effect-sirkel")).hasKey(QStringLiteral("OutlineColor"));
-    if (!hasCustomColor) {
-        return QGuiApplication::palette().color(QPalette::Highlight);
+    const QString configuredPath = SirkelConfig::wallpaperColorPath();
+    if (configuredPath.isEmpty()) {
+        QFile file(QDir::homePath() + QStringLiteral("/.cache/wal/colors.json"));
+        if (!file.open(QIODevice::ReadOnly)) {
+            return QColor();
+        }
+        const QJsonObject root = QJsonDocument::fromJson(file.readAll()).object();
+        return QColor(root.value(QStringLiteral("colors")).toObject().value(QStringLiteral("color1")).toString());
     }
-    return SirkelConfig::outlineColor();
+    QFile file(configuredPath);
+    if (!file.open(QIODevice::ReadOnly)) {
+        return QColor();
+    }
+    return QColor(QString::fromUtf8(file.readAll()).trimmed());
+}
+
+// A color's kcfg default (OutlineColor/IndicatorColor) is just a static
+// fallback for "manual" mode, not itself a live source — the live sources
+// ("theme", "wallpaper") are resolved fresh every time instead, per the
+// *Source setting. `forOutline` picks OutlineColor/OutlineColorSource vs.
+// IndicatorColor/IndicatorColorSource; LinkIndicatorOutlineColor (checked
+// by the caller, not here) is what makes the indicator just reuse the
+// outline's resolved color instead of calling this for itself at all.
+QColor resolveColor(bool forOutline)
+{
+    const QString source = forOutline ? SirkelConfig::outlineColorSource() : SirkelConfig::indicatorColorSource();
+    if (source == QStringLiteral("wallpaper")) {
+        const QColor wallpaper = readWallpaperColor();
+        if (wallpaper.isValid()) {
+            return wallpaper;
+        }
+        // Fall through to the theme accent if the wallpaper file is
+        // missing/unparseable — always-valid is more useful than a visibly
+        // broken color.
+    } else if (source == QStringLiteral("manual")) {
+        return forOutline ? SirkelConfig::outlineColor() : SirkelConfig::indicatorColor();
+    }
+    return QGuiApplication::palette().color(QPalette::Highlight);
 }
 
 std::unique_ptr<QQuickView> makeOverlayWindow(const QUrl &source)
@@ -120,15 +156,25 @@ SnapDirection composeDirection(bool up, bool down, bool left, bool right)
 }
 
 SirkelEffect::SirkelEffect()
-    : m_outline(makeOverlayWindow(QUrl(QStringLiteral("qrc:/qml/Outline.qml"))))
-    , m_indicator(makeOverlayWindow(QUrl(QStringLiteral("qrc:/qml/Indicator.qml"))))
+    : m_overlay(makeOverlayWindow(QUrl(QStringLiteral("qrc:/qml/Overlay.qml"))))
 {
     m_toggleAction = new QAction(this);
     m_toggleAction->setObjectName(QStringLiteral("SirkelSnap"));
     m_toggleAction->setText(QStringLiteral("Sirkel: hold to snap window"));
     KGlobalAccel::self()->setDefaultShortcut(m_toggleAction, {QKeySequence(Qt::Key_F24)});
     KGlobalAccel::self()->setShortcut(m_toggleAction, {QKeySequence(Qt::Key_F24)});
-    connect(m_toggleAction, &QAction::triggered, this, &SirkelEffect::arm);
+    connect(m_toggleAction, &QAction::triggered, this, &SirkelEffect::handleTrigger);
+
+    m_delayTimer = new QTimer(this);
+    m_delayTimer->setSingleShot(true);
+    connect(m_delayTimer, &QTimer::timeout, this, [this]() {
+        m_triggerPhase = TriggerPhase::Idle;
+        arm();
+    });
+
+    m_doubleClickTimer = new QTimer(this);
+    m_doubleClickTimer->setSingleShot(true);
+    connect(m_doubleClickTimer, &QTimer::timeout, this, &SirkelEffect::cancelPendingTrigger);
 
     qCWarning(SIRKEL) << "constructed, build marker rev5-qquickview";
 }
@@ -160,30 +206,72 @@ void SirkelEffect::reconfigure(ReconfigureFlags flags)
     qCWarning(SIRKEL) << "reconfigure(): config reloaded";
 }
 
-void SirkelEffect::arm()
+void SirkelEffect::handleTrigger()
 {
-    if (m_targetWindow) {
+    if (m_targetWindow || m_triggerPhase != TriggerPhase::Idle) {
         // F24 auto-repeats at the OS level while held; ignore re-entrant
-        // triggers for a session that's already armed.
+        // triggers for a session that's already armed, or a trigger gesture
+        // that's already pending.
         return;
     }
 
-    // SirkelConfig::self() is a process-wide singleton, independent of
-    // this Effect object's own lifecycle — toggling the effect off/on in
-    // Desktop Effects destroys and recreates the Effect, but calls into
-    // the exact same (still stale) config singleton either way, so that
-    // alone doesn't help. Rather than depend on KWin calling reconfigure()
-    // on us at some point (unverified whether it reliably does), force a
-    // fresh read from disk unconditionally on every arm() — cheap (a small
-    // ini file), and guarantees up-to-date settings on every hyperkey
-    // press regardless of what did or didn't notify us.
+    // See the identical comment this used to sit next to in arm() — moved
+    // here since this is now the single entry point for every trigger mode,
+    // and delay/double-click need to know TriggerMode/TriggerDelay *before*
+    // arm() itself would otherwise run.
     SirkelConfig::self()->config()->reparseConfiguration();
     SirkelConfig::self()->load();
+
+    const QString mode = SirkelConfig::triggerMode();
+    if (mode == QStringLiteral("doubleclick")) {
+        qCWarning(SIRKEL) << "handleTrigger(): first click, waiting for a second within the window";
+        m_triggerPhase = TriggerPhase::PendingDoubleClick;
+        m_keyboardAlreadyGrabbed = true;
+        KWin::effects->grabKeyboard(this);
+        m_doubleClickTimer->start(400);
+        return;
+    }
+
+    const int delay = SirkelConfig::triggerDelay();
+    if (mode == QStringLiteral("delay") && delay > 0) {
+        qCWarning(SIRKEL) << "handleTrigger(): pending delay of" << delay << "ms";
+        m_triggerPhase = TriggerPhase::PendingDelay;
+        m_keyboardAlreadyGrabbed = true;
+        KWin::effects->grabKeyboard(this);
+        m_delayTimer->start(delay);
+        return;
+    }
+
+    arm();
+}
+
+void SirkelEffect::cancelPendingTrigger()
+{
+    qCWarning(SIRKEL) << "cancelPendingTrigger(): trigger gesture abandoned";
+    m_delayTimer->stop();
+    m_doubleClickTimer->stop();
+    m_triggerPhase = TriggerPhase::Idle;
+    if (m_keyboardAlreadyGrabbed) {
+        m_keyboardAlreadyGrabbed = false;
+        KWin::effects->ungrabKeyboard();
+    }
+}
+
+void SirkelEffect::arm()
+{
+    if (m_targetWindow) {
+        // Already armed — shouldn't normally be reachable (handleTrigger()
+        // already guards re-entrant triggers), but guard here too since
+        // arm() can also be called from the delay timer / double-click
+        // path, not just directly.
+        return;
+    }
 
     qCWarning(SIRKEL) << "arm() called";
     m_targetWindow = KWin::effects->activeWindow();
     if (!m_targetWindow) {
         qCWarning(SIRKEL) << "arm(): no active window, aborting";
+        cancelPendingTrigger();
         return;
     }
     if (m_targetWindow->isSpecialWindow()) {
@@ -196,45 +284,64 @@ void SirkelEffect::arm()
         // all, so refuse to arm against any of them.
         qCWarning(SIRKEL) << "arm(): active window is a special window (desktop/panel/etc), aborting";
         m_targetWindow = nullptr;
+        cancelPendingTrigger();
         return;
     }
-    m_targetScreen = m_targetWindow->screen();
+    // Snapshotted once here, not tracked live if the cursor crosses
+    // monitors mid-drag (see SnapToCursorScreen's kcfg doc comment).
+    m_targetScreen = SirkelConfig::snapToCursorScreen() ? KWin::effects->screenAt(KWin::effects->cursorPos().toPoint()) : nullptr;
+    if (!m_targetScreen) {
+        m_targetScreen = m_targetWindow->screen();
+    }
     m_accumulatedDelta = QPointF();
     m_direction = SnapDirection::None;
     m_keyUp = m_keyDown = m_keyLeft = m_keyRight = false;
     m_active = true;
     m_engaged = false;
+    m_outlinePartVisible = false;
+    m_indicatorPartVisible = false;
 
     applyIndicatorStyle();
 
     if (m_targetScreen) {
+        // m_overlay stays fixed for the whole session, covering the
+        // screen's entire usable area — only the highlighted rect inside it
+        // (targetX/Y/Width/Height) moves, so that move can be animated.
+        // Computed before repositionIndicator(), which needs it to convert
+        // the indicator's own absolute screen position into this window's
+        // local coordinates.
+        m_outlineArea = KWin::effects->clientArea(KWin::MaximizeArea, m_targetScreen);
+        m_overlay->setGeometry(m_outlineArea.toRect());
+
         repositionIndicator();
-        if (QQuickItem *root = m_indicator->rootObject()) {
-            root->setProperty("direction", snapDirectionName(m_direction));
+        if (QQuickItem *indicator = indicatorPart()) {
+            indicator->setProperty("direction", snapDirectionName(m_direction));
         }
         // Not shown yet — see engage(). Holding the hyperkey by itself
         // should be a no-op; the indicator only appears once the first real
         // input (mouse movement or a direction key) arrives.
 
-        // The outline's window now stays fixed for the whole session,
-        // covering the screen's entire usable area — only the highlighted
-        // rect inside it (targetX/Y/Width/Height) moves, so that move can
-        // be animated. Reset that rect to zero-size at the area's center
-        // while still hidden, so the first direction picked this session
-        // grows out from the middle instead of gliding in from wherever
-        // the previous session last left it.
-        m_outlineArea = KWin::effects->clientArea(KWin::MaximizeArea, m_targetScreen);
-        m_outline->setGeometry(m_outlineArea.toRect());
-        if (QQuickItem *root = m_outline->rootObject()) {
+        // Reset the outline's own target rect to zero-size at the area's
+        // center while still hidden, so the first direction picked this
+        // session grows out from the middle instead of gliding in from
+        // wherever the previous session last left it.
+        if (QQuickItem *outline = outlinePart()) {
             const QPointF center = m_outlineArea.center() - m_outlineArea.topLeft();
-            root->setProperty("targetX", center.x());
-            root->setProperty("targetY", center.y());
-            root->setProperty("targetWidth", 0);
-            root->setProperty("targetHeight", 0);
+            outline->setProperty("targetX", center.x());
+            outline->setProperty("targetY", center.y());
+            outline->setProperty("targetWidth", 0);
+            outline->setProperty("targetHeight", 0);
         }
     }
 
-    KWin::effects->grabKeyboard(this);
+    // Pending delay/double-click already grabbed the keyboard (needed to
+    // watch for the release/second press before arm() was even called) —
+    // don't grab it a second time.
+    if (!m_keyboardAlreadyGrabbed) {
+        KWin::effects->grabKeyboard(this);
+    }
+    m_keyboardAlreadyGrabbed = false;
+    m_triggerPhase = TriggerPhase::Idle;
     KWin::effects->startMouseInterception(this, Qt::CrossCursor);
 }
 
@@ -245,7 +352,11 @@ void SirkelEffect::engage()
     }
     m_engaged = true;
     if (m_targetScreen && SirkelConfig::showIndicator()) {
-        m_indicator->show();
+        m_indicatorPartVisible = true;
+        if (QQuickItem *indicator = indicatorPart()) {
+            indicator->setProperty("visible", true);
+        }
+        updateOverlayVisibility();
     }
 }
 
@@ -255,8 +366,10 @@ void SirkelEffect::finish(bool applyPendingDirection)
                           << "m_direction=" << snapDirectionName(m_direction);
     KWin::effects->stopMouseInterception(this);
     KWin::effects->ungrabKeyboard();
-    m_outline->hide();
-    m_indicator->hide();
+    m_outlinePartVisible = false;
+    m_indicatorPartVisible = false;
+    m_overlay->hide();
+    KWindowEffects::enableBlurBehind(m_overlay.get(), false);
     m_active = false;
 
     if (applyPendingDirection && m_targetWindow && m_direction != SnapDirection::None) {
@@ -288,30 +401,55 @@ void SirkelEffect::setDirection(SnapDirection direction)
     qCWarning(SIRKEL) << "setDirection():" << snapDirectionName(m_direction) << "->" << snapDirectionName(direction);
     m_direction = direction;
 
-    if (QQuickItem *root = m_indicator->rootObject()) {
-        root->setProperty("direction", snapDirectionName(m_direction));
+    if (QQuickItem *indicator = indicatorPart()) {
+        indicator->setProperty("direction", snapDirectionName(m_direction));
     }
 
     if (m_direction == SnapDirection::None || !m_targetScreen) {
-        m_outline->hide();
+        m_outlinePartVisible = false;
+        if (QQuickItem *outline = outlinePart()) {
+            outline->setProperty("visible", false);
+        }
+        KWindowEffects::enableBlurBehind(m_overlay.get(), false);
+        updateOverlayVisibility();
         return;
     }
 
-    // The outline window itself stays fixed (covering m_outlineArea) for
-    // the whole session — only the highlighted rect inside it moves, in
-    // window-local coordinates, so QML's Behavior animations can glide/grow
-    // it between directions instead of an instant window move+resize.
+    // The outline's own target rect, in m_overlay's local coordinates — the
+    // window itself stays fixed (covering m_outlineArea), only this rect
+    // moves, so QML's Behavior animations can glide/grow it between
+    // directions instead of an instant window move+resize.
     const QRectF target = snapTargetGeometry(m_direction, m_outlineArea, SirkelConfig::paddingHorizontal(), SirkelConfig::paddingVertical());
-    if (QQuickItem *root = m_outline->rootObject()) {
-        const QRectF local = target.translated(-m_outlineArea.topLeft());
-        root->setProperty("targetX", local.x());
-        root->setProperty("targetY", local.y());
-        root->setProperty("targetWidth", local.width());
-        root->setProperty("targetHeight", local.height());
+    QRectF local;
+    if (QQuickItem *outline = outlinePart()) {
+        local = target.translated(-m_outlineArea.topLeft());
+        outline->setProperty("targetX", local.x());
+        outline->setProperty("targetY", local.y());
+        outline->setProperty("targetWidth", local.width());
+        outline->setProperty("targetHeight", local.height());
     }
+    applyOutlineBlur(local);
     if (SirkelConfig::showOutline()) {
-        m_outline->show();
+        m_outlinePartVisible = true;
+        if (QQuickItem *outline = outlinePart()) {
+            outline->setProperty("visible", true);
+        }
+        updateOverlayVisibility();
     }
+}
+
+void SirkelEffect::applyOutlineBlur(const QRectF &localRect)
+{
+    if (!SirkelConfig::outlineBlur()) {
+        KWindowEffects::enableBlurBehind(m_overlay.get(), false);
+        return;
+    }
+    // A plain rectangular region, not following OutlineCornerRadius — the
+    // blurred corners end up square even when the outline itself is
+    // rounded. Simple and reliable beats a pixel-perfect rounded region
+    // here; the mismatch is minor at the small corner radii this effect
+    // actually uses.
+    KWindowEffects::enableBlurBehind(m_overlay.get(), true, QRegion(localRect.toRect()));
 }
 
 void SirkelEffect::updateDirectionFromPointer()
@@ -338,8 +476,18 @@ void SirkelEffect::repositionIndicator()
     // this same point, so it always matches what's actually drawn on screen.
     m_indicatorCenter = SirkelConfig::indicatorFollowsMouse() ? KWin::effects->cursorPos() : m_targetScreen->geometryF().center();
     const int size = SirkelConfig::indicatorSize();
-    const QRect indicatorGeometry(QPoint(qRound(m_indicatorCenter.x() - size / 2.0), qRound(m_indicatorCenter.y() - size / 2.0)), QSize(size, size));
-    m_indicator->setGeometry(indicatorGeometry);
+    // Absolute screen position translated into m_overlay's own local
+    // coordinates (m_outlineArea must already be set — see arm()), the same
+    // translation already used for the outline's own target rect. Plain
+    // x/y/width/height — built-in QQuickItem properties, not anything
+    // Indicator.qml needs to declare itself.
+    const QPointF topLeft = m_indicatorCenter - QPointF(size / 2.0, size / 2.0) - m_outlineArea.topLeft();
+    if (QQuickItem *indicator = indicatorPart()) {
+        indicator->setProperty("x", topLeft.x());
+        indicator->setProperty("y", topLeft.y());
+        indicator->setProperty("width", size);
+        indicator->setProperty("height", size);
+    }
 }
 
 void SirkelEffect::applyIndicatorStyle()
@@ -347,21 +495,45 @@ void SirkelEffect::applyIndicatorStyle()
     // Read fresh each time a session arms, rather than reacting live to
     // config changes mid-session — settings changed in the KCM take effect
     // the next time Sirkel is triggered.
-    const QColor outlineColor = resolveOutlineColor();
-    if (QQuickItem *root = m_indicator->rootObject()) {
-        root->setProperty("cornerRadius", SirkelConfig::indicatorCornerRadius());
-        root->setProperty("ringWidth", SirkelConfig::indicatorRingWidth());
-        root->setProperty("pointerLength", SirkelConfig::indicatorPointerLength());
-        root->setProperty("showText", SirkelConfig::showIndicatorText());
-        root->setProperty("highlightColor", outlineColor);
-        root->setProperty("animationDuration", SirkelConfig::outlineAnimationDuration());
+    const QColor outlineColor = resolveColor(true);
+    const QColor indicatorColor = SirkelConfig::linkIndicatorOutlineColor() ? outlineColor : resolveColor(false);
+    if (QQuickItem *indicator = indicatorPart()) {
+        indicator->setProperty("cornerRadius", SirkelConfig::indicatorCornerRadius());
+        indicator->setProperty("ringWidth", SirkelConfig::indicatorRingWidth());
+        indicator->setProperty("pointerLength", SirkelConfig::indicatorPointerLength());
+        indicator->setProperty("showText", SirkelConfig::showIndicatorText());
+        indicator->setProperty("highlightColor", indicatorColor);
+        indicator->setProperty("animationDuration", SirkelConfig::outlineAnimationDuration());
     }
-    if (QQuickItem *root = m_outline->rootObject()) {
-        root->setProperty("borderWidth", SirkelConfig::outlineBorderWidth());
-        root->setProperty("borderColor", outlineColor);
-        root->setProperty("cornerRadius", SirkelConfig::outlineCornerRadius());
-        root->setProperty("fillOpacity", SirkelConfig::outlineFillOpacity());
-        root->setProperty("animationDuration", SirkelConfig::outlineAnimationDuration());
+    if (QQuickItem *outline = outlinePart()) {
+        outline->setProperty("borderWidth", SirkelConfig::outlineBorderWidth());
+        outline->setProperty("borderColor", outlineColor);
+        outline->setProperty("cornerRadius", SirkelConfig::outlineCornerRadius());
+        outline->setProperty("fillOpacity", SirkelConfig::outlineFillOpacity());
+        outline->setProperty("animationDuration", SirkelConfig::outlineAnimationDuration());
+    }
+}
+
+QQuickItem *SirkelEffect::outlinePart() const
+{
+    QQuickItem *root = m_overlay->rootObject();
+    return root ? root->findChild<QQuickItem *>(QStringLiteral("outlinePart")) : nullptr;
+}
+
+QQuickItem *SirkelEffect::indicatorPart() const
+{
+    QQuickItem *root = m_overlay->rootObject();
+    return root ? root->findChild<QQuickItem *>(QStringLiteral("indicatorPart")) : nullptr;
+}
+
+void SirkelEffect::updateOverlayVisibility()
+{
+    if (m_outlinePartVisible || m_indicatorPartVisible) {
+        if (!m_overlay->isVisible()) {
+            m_overlay->show();
+        }
+    } else if (m_overlay->isVisible()) {
+        m_overlay->hide();
     }
 }
 
@@ -390,6 +562,31 @@ void SirkelEffect::actionMinimize()
 
 void SirkelEffect::grabbedKeyboardEvent(QKeyEvent *event)
 {
+    if (m_triggerPhase != TriggerPhase::Idle) {
+        // Not a real session yet — just watching for the gesture that
+        // decides whether one starts. Esc always gives up. For "delay",
+        // only a release matters (it cancels; the timer itself is what
+        // arms if the key's still down when it fires). For "doubleclick",
+        // only a second, non-autorepeat press matters — the very first
+        // press is never delivered here at all (it's what caused the
+        // keyboard grab in the first place, via handleTrigger()), so any
+        // fresh KeyPress seen while pending unambiguously *is* that second
+        // press.
+        if (event->key() == Qt::Key_Escape && event->type() == QEvent::KeyPress) {
+            cancelPendingTrigger();
+            return;
+        }
+        if (event->key() == Qt::Key_F24) {
+            if (m_triggerPhase == TriggerPhase::PendingDelay && event->type() == QEvent::KeyRelease) {
+                cancelPendingTrigger();
+            } else if (m_triggerPhase == TriggerPhase::PendingDoubleClick && event->type() == QEvent::KeyPress && !event->isAutoRepeat()) {
+                m_doubleClickTimer->stop();
+                arm();
+            }
+        }
+        return;
+    }
+
     // Hyperkey+<key> bindings available while armed. Add a row here to
     // extend — the action fires immediately and ends the session without
     // applying a directional snap.

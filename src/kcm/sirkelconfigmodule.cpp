@@ -4,22 +4,49 @@
 #include <KConfigGroup>
 #include <KPluginFactory>
 
+#include <QDir>
+#include <QFile>
 #include <QGuiApplication>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QPalette>
 
 namespace
 {
-// See resolveOutlineColor() in sirkeleffect.cpp — same "never explicitly
-// saved yet" check, duplicated here (rather than shared) because this is a
-// separate process (systemsettings/kcmshell6, not kwin_wayland) with its
-// own copy of SirkelConfig::self().
-QColor resolveOutlineColor()
+// See readWallpaperColor() / resolveColor() in sirkeleffect.cpp — identical
+// logic, duplicated here (rather than shared) because this is a separate
+// process (systemsettings/kcmshell6, not kwin_wayland) with its own copy of
+// SirkelConfig::self().
+QColor readWallpaperColor()
 {
-    const bool hasCustomColor = SirkelConfig::self()->config()->group(QStringLiteral("Effect-sirkel")).hasKey(QStringLiteral("OutlineColor"));
-    if (!hasCustomColor) {
-        return QGuiApplication::palette().color(QPalette::Highlight);
+    const QString configuredPath = SirkelConfig::wallpaperColorPath();
+    if (configuredPath.isEmpty()) {
+        QFile file(QDir::homePath() + QStringLiteral("/.cache/wal/colors.json"));
+        if (!file.open(QIODevice::ReadOnly)) {
+            return QColor();
+        }
+        const QJsonObject root = QJsonDocument::fromJson(file.readAll()).object();
+        return QColor(root.value(QStringLiteral("colors")).toObject().value(QStringLiteral("color1")).toString());
     }
-    return SirkelConfig::outlineColor();
+    QFile file(configuredPath);
+    if (!file.open(QIODevice::ReadOnly)) {
+        return QColor();
+    }
+    return QColor(QString::fromUtf8(file.readAll()).trimmed());
+}
+
+QColor resolveColor(bool forOutline)
+{
+    const QString source = forOutline ? SirkelConfig::outlineColorSource() : SirkelConfig::indicatorColorSource();
+    if (source == QStringLiteral("wallpaper")) {
+        const QColor wallpaper = readWallpaperColor();
+        if (wallpaper.isValid()) {
+            return wallpaper;
+        }
+    } else if (source == QStringLiteral("manual")) {
+        return forOutline ? SirkelConfig::outlineColor() : SirkelConfig::indicatorColor();
+    }
+    return QGuiApplication::palette().color(QPalette::Highlight);
 }
 }
 
@@ -163,12 +190,77 @@ void SirkelConfigModule::setOutlineCornerRadius(int value)
 
 QColor SirkelConfigModule::outlineColor() const
 {
-    return resolveOutlineColor();
+    return resolveColor(true);
 }
 
 void SirkelConfigModule::setOutlineColor(const QColor &value)
 {
+    // Picking any concrete color (a theme swatch or the custom picker) is a
+    // deliberate choice — freeze it, same as picking "Manual" explicitly,
+    // rather than keep silently tracking "theme"/"wallpaper" afterward.
     SirkelConfig::setOutlineColor(value);
+    SirkelConfig::setOutlineColorSource(QStringLiteral("manual"));
+    SirkelConfig::self()->save();
+    Q_EMIT settingsChanged();
+}
+
+QColor SirkelConfigModule::indicatorColor() const
+{
+    return SirkelConfig::linkIndicatorOutlineColor() ? resolveColor(true) : resolveColor(false);
+}
+
+void SirkelConfigModule::setIndicatorColor(const QColor &value)
+{
+    SirkelConfig::setIndicatorColor(value);
+    SirkelConfig::setIndicatorColorSource(QStringLiteral("manual"));
+    SirkelConfig::self()->save();
+    Q_EMIT settingsChanged();
+}
+
+QString SirkelConfigModule::outlineColorSource() const
+{
+    return SirkelConfig::outlineColorSource();
+}
+
+void SirkelConfigModule::setOutlineColorSource(const QString &value)
+{
+    SirkelConfig::setOutlineColorSource(value);
+    SirkelConfig::self()->save();
+    Q_EMIT settingsChanged();
+}
+
+QString SirkelConfigModule::indicatorColorSource() const
+{
+    return SirkelConfig::indicatorColorSource();
+}
+
+void SirkelConfigModule::setIndicatorColorSource(const QString &value)
+{
+    SirkelConfig::setIndicatorColorSource(value);
+    SirkelConfig::self()->save();
+    Q_EMIT settingsChanged();
+}
+
+bool SirkelConfigModule::linkIndicatorOutlineColor() const
+{
+    return SirkelConfig::linkIndicatorOutlineColor();
+}
+
+void SirkelConfigModule::setLinkIndicatorOutlineColor(bool value)
+{
+    SirkelConfig::setLinkIndicatorOutlineColor(value);
+    SirkelConfig::self()->save();
+    Q_EMIT settingsChanged();
+}
+
+QString SirkelConfigModule::wallpaperColorPath() const
+{
+    return SirkelConfig::wallpaperColorPath();
+}
+
+void SirkelConfigModule::setWallpaperColorPath(const QString &value)
+{
+    SirkelConfig::setWallpaperColorPath(value);
     SirkelConfig::self()->save();
     Q_EMIT settingsChanged();
 }
@@ -181,6 +273,18 @@ int SirkelConfigModule::outlineFillOpacity() const
 void SirkelConfigModule::setOutlineFillOpacity(int value)
 {
     SirkelConfig::setOutlineFillOpacity(value);
+    SirkelConfig::self()->save();
+    Q_EMIT settingsChanged();
+}
+
+bool SirkelConfigModule::outlineBlur() const
+{
+    return SirkelConfig::outlineBlur();
+}
+
+void SirkelConfigModule::setOutlineBlur(bool value)
+{
+    SirkelConfig::setOutlineBlur(value);
     SirkelConfig::self()->save();
     Q_EMIT settingsChanged();
 }
@@ -246,6 +350,42 @@ bool SirkelConfigModule::indicatorFollowsMouse() const
 void SirkelConfigModule::setIndicatorFollowsMouse(bool value)
 {
     SirkelConfig::setIndicatorFollowsMouse(value);
+    SirkelConfig::self()->save();
+    Q_EMIT settingsChanged();
+}
+
+bool SirkelConfigModule::snapToCursorScreen() const
+{
+    return SirkelConfig::snapToCursorScreen();
+}
+
+void SirkelConfigModule::setSnapToCursorScreen(bool value)
+{
+    SirkelConfig::setSnapToCursorScreen(value);
+    SirkelConfig::self()->save();
+    Q_EMIT settingsChanged();
+}
+
+QString SirkelConfigModule::triggerMode() const
+{
+    return SirkelConfig::triggerMode();
+}
+
+void SirkelConfigModule::setTriggerMode(const QString &value)
+{
+    SirkelConfig::setTriggerMode(value);
+    SirkelConfig::self()->save();
+    Q_EMIT settingsChanged();
+}
+
+int SirkelConfigModule::triggerDelay() const
+{
+    return SirkelConfig::triggerDelay();
+}
+
+void SirkelConfigModule::setTriggerDelay(int value)
+{
+    SirkelConfig::setTriggerDelay(value);
     SirkelConfig::self()->save();
     Q_EMIT settingsChanged();
 }

@@ -15,6 +15,14 @@ ColumnLayout {
     implicitHeight: Kirigami.Units.gridUnit * 26
     spacing: 0
 
+    // Shared across every tab so the page reads as one consistent design
+    // instead of each tab doing its own thing: every single-value field
+    // (SpinBox/ComboBox/TextField) is the same width, and each tab's whole
+    // form is capped to this width and centered rather than stretching
+    // edge-to-edge in a resized window.
+    readonly property real fieldWidth: Kirigami.Units.gridUnit * 14
+    readonly property real formWidth: Kirigami.Units.gridUnit * 30
+
     Kirigami.Heading {
         Layout.fillWidth: true
         Layout.margins: Kirigami.Units.smallSpacing
@@ -44,68 +52,127 @@ ColumnLayout {
         QQC2.ScrollView {
             contentWidth: availableWidth
 
-            Kirigami.FormLayout {
+            Item {
                 width: parent.width
+                implicitHeight: behaviorForm.implicitHeight + Kirigami.Units.largeSpacing * 2
 
-                Kirigami.Separator {
-                    Kirigami.FormData.isSection: true
-                    Kirigami.FormData.label: "Mouse movement deadzone"
-                }
+                Kirigami.FormLayout {
+                    id: behaviorForm
+                    width: Math.min(parent.width - Kirigami.Units.largeSpacing * 2, root.formWidth)
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    anchors.top: parent.top
+                    anchors.topMargin: Kirigami.Units.largeSpacing
 
-                QQC2.SpinBox {
-                    Kirigami.FormData.label: "Horizontal (px):"
-                    from: 0
-                    to: 500
-                    value: kcm.horizontalDeadzone
-                    onValueModified: kcm.horizontalDeadzone = value
-                }
+                    Kirigami.Separator {
+                        Kirigami.FormData.isSection: true
+                        Kirigami.FormData.label: "Mouse movement deadzone"
+                    }
 
-                QQC2.SpinBox {
-                    Kirigami.FormData.label: "Vertical (px):"
-                    from: 0
-                    to: 500
-                    value: kcm.verticalDeadzone
-                    onValueModified: kcm.verticalDeadzone = value
-                }
+                    QQC2.SpinBox {
+                        Kirigami.FormData.label: "Horizontal (px):"
+                        Layout.preferredWidth: root.fieldWidth
+                        from: 0
+                        to: 500
+                        value: kcm.horizontalDeadzone
+                        onValueModified: kcm.horizontalDeadzone = value
+                    }
 
-                Kirigami.Separator {
-                    Kirigami.FormData.isSection: true
-                    Kirigami.FormData.label: "Padding"
-                }
+                    QQC2.SpinBox {
+                        Kirigami.FormData.label: "Vertical (px):"
+                        Layout.preferredWidth: root.fieldWidth
+                        from: 0
+                        to: 500
+                        value: kcm.verticalDeadzone
+                        onValueModified: kcm.verticalDeadzone = value
+                    }
 
-                QQC2.SpinBox {
-                    Kirigami.FormData.label: "Horizontal (px):"
-                    from: 0
-                    to: 200
-                    value: kcm.paddingHorizontal
-                    onValueModified: kcm.paddingHorizontal = value
-                }
+                    Kirigami.Separator {
+                        Kirigami.FormData.isSection: true
+                        Kirigami.FormData.label: "Padding"
+                    }
 
-                QQC2.SpinBox {
-                    Kirigami.FormData.label: "Vertical (px):"
-                    from: 0
-                    to: 200
-                    value: kcm.paddingVertical
-                    onValueModified: kcm.paddingVertical = value
-                }
+                    QQC2.SpinBox {
+                        Kirigami.FormData.label: "Horizontal (px):"
+                        Layout.preferredWidth: root.fieldWidth
+                        from: 0
+                        to: 200
+                        value: kcm.paddingHorizontal
+                        onValueModified: kcm.paddingHorizontal = value
+                    }
 
-                Kirigami.Separator {
-                    Kirigami.FormData.isSection: true
-                    Kirigami.FormData.label: "Keybinds"
-                }
+                    QQC2.SpinBox {
+                        Kirigami.FormData.label: "Vertical (px):"
+                        Layout.preferredWidth: root.fieldWidth
+                        from: 0
+                        to: 200
+                        value: kcm.paddingVertical
+                        onValueModified: kcm.paddingVertical = value
+                    }
 
-                QQC2.ComboBox {
-                    Kirigami.FormData.label: "Movement keys:"
-                    textRole: "text"
-                    // "none" disables direction-key bindings entirely for
-                    // users who only want to drag the mouse — see
-                    // axisForArmedKey() in sirkeleffect.cpp.
-                    model: kcm.keybindSchemes.map(scheme => ({
-                        value: scheme,
-                        text: ({ arrows: "Arrows", wasd: "WASD", hjkl: "HJKL", none: "None (mouse only)" })[scheme] || scheme
-                    }))
-                    currentIndex: kcm.keybindSchemes.indexOf(kcm.keybindScheme)
-                    onActivated: kcm.keybindScheme = kcm.keybindSchemes[currentIndex]
+                    Kirigami.Separator {
+                        Kirigami.FormData.isSection: true
+                        Kirigami.FormData.label: "Monitors"
+                    }
+
+                    QQC2.Switch {
+                        Kirigami.FormData.label: "Targeting:"
+                        text: "Snap to the cursor's monitor instead of the window's own"
+                        checked: kcm.snapToCursorScreen
+                        onToggled: kcm.snapToCursorScreen = checked
+
+                        QQC2.ToolTip.text: "Decided once when you press the hyperkey, from wherever the cursor is at that moment — not tracked live if you drag across monitors mid-gesture."
+                        QQC2.ToolTip.visible: hovered
+                    }
+
+                    Kirigami.Separator {
+                        Kirigami.FormData.isSection: true
+                        Kirigami.FormData.label: "Keybinds"
+                    }
+
+                    QQC2.ComboBox {
+                        Kirigami.FormData.label: "Movement keys:"
+                        Layout.preferredWidth: root.fieldWidth
+                        textRole: "text"
+                        // "none" disables direction-key bindings entirely
+                        // for users who only want to drag the mouse — see
+                        // axisForArmedKey() in sirkeleffect.cpp.
+                        model: kcm.keybindSchemes.map(scheme => ({
+                            value: scheme,
+                            text: ({ arrows: "Arrows", wasd: "WASD", hjkl: "HJKL", none: "None (mouse only)" })[scheme] || scheme
+                        }))
+                        currentIndex: kcm.keybindSchemes.indexOf(kcm.keybindScheme)
+                        onActivated: kcm.keybindScheme = kcm.keybindSchemes[currentIndex]
+                    }
+
+                    QQC2.ComboBox {
+                        Kirigami.FormData.label: "Hyperkey trigger:"
+                        Layout.preferredWidth: root.fieldWidth
+                        textRole: "text"
+                        // "delay" and "doubleclick" both need to watch for
+                        // the key's release before committing to a session
+                        // — see TriggerPhase in sirkeleffect.h.
+                        model: [
+                            { value: "instant", text: "Instant" },
+                            { value: "delay", text: "Delay" },
+                            { value: "doubleclick", text: "Double-click" },
+                        ]
+                        currentIndex: model.findIndex(m => m.value === kcm.triggerMode)
+                        onActivated: kcm.triggerMode = model[currentIndex].value
+
+                        QQC2.ToolTip.text: "Instant: arms as soon as you press it, like today. Delay: must be held for the duration below before it arms — releasing sooner cancels. Double-click: a quick tap then a second press-and-hold (within about 0.4s) arms it; a single press-and-hold does nothing."
+                        QQC2.ToolTip.visible: hovered
+                    }
+
+                    QQC2.SpinBox {
+                        Kirigami.FormData.label: "Delay (ms):"
+                        Layout.preferredWidth: root.fieldWidth
+                        visible: kcm.triggerMode === "delay"
+                        from: 0
+                        to: 1000
+                        stepSize: 50
+                        value: kcm.triggerDelay
+                        onValueModified: kcm.triggerDelay = value
+                    }
                 }
             }
         }
@@ -114,60 +181,73 @@ ColumnLayout {
         QQC2.ScrollView {
             contentWidth: availableWidth
 
-            Kirigami.FormLayout {
+            Item {
                 width: parent.width
+                implicitHeight: indicatorForm.implicitHeight + Kirigami.Units.largeSpacing * 2
 
-                QQC2.Switch {
-                    Kirigami.FormData.label: "Visible:"
-                    text: "Show the indicator"
-                    checked: kcm.showIndicator
-                    onToggled: kcm.showIndicator = checked
-                }
+                Kirigami.FormLayout {
+                    id: indicatorForm
+                    width: Math.min(parent.width - Kirigami.Units.largeSpacing * 2, root.formWidth)
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    anchors.top: parent.top
+                    anchors.topMargin: Kirigami.Units.largeSpacing
 
-                QQC2.Switch {
-                    Kirigami.FormData.label: "Text:"
-                    text: "Show direction name in indicator"
-                    checked: kcm.showIndicatorText
-                    onToggled: kcm.showIndicatorText = checked
-                }
+                    QQC2.Switch {
+                        Kirigami.FormData.label: "Visible:"
+                        text: "Show the indicator"
+                        checked: kcm.showIndicator
+                        onToggled: kcm.showIndicator = checked
+                    }
 
-                QQC2.Switch {
-                    Kirigami.FormData.label: "Position:"
-                    text: "Spawn at cursor instead of screen center"
-                    checked: kcm.indicatorFollowsMouse
-                    onToggled: kcm.indicatorFollowsMouse = checked
-                }
+                    QQC2.Switch {
+                        Kirigami.FormData.label: "Text:"
+                        text: "Show direction name in indicator"
+                        checked: kcm.showIndicatorText
+                        onToggled: kcm.showIndicatorText = checked
+                    }
 
-                QQC2.SpinBox {
-                    Kirigami.FormData.label: "Size (px):"
-                    from: 60
-                    to: 400
-                    value: kcm.indicatorSize
-                    onValueModified: kcm.indicatorSize = value
-                }
+                    QQC2.Switch {
+                        Kirigami.FormData.label: "Position:"
+                        text: "Spawn at cursor instead of screen center"
+                        checked: kcm.indicatorFollowsMouse
+                        onToggled: kcm.indicatorFollowsMouse = checked
+                    }
 
-                QQC2.SpinBox {
-                    Kirigami.FormData.label: "Corner radius (px):"
-                    from: 0
-                    to: kcm.indicatorSize / 2
-                    value: kcm.indicatorCornerRadius
-                    onValueModified: kcm.indicatorCornerRadius = value
-                }
+                    QQC2.SpinBox {
+                        Kirigami.FormData.label: "Size (px):"
+                        Layout.preferredWidth: root.fieldWidth
+                        from: 60
+                        to: 400
+                        value: kcm.indicatorSize
+                        onValueModified: kcm.indicatorSize = value
+                    }
 
-                QQC2.SpinBox {
-                    Kirigami.FormData.label: "Line thickness (px):"
-                    from: 2
-                    to: 60
-                    value: kcm.indicatorRingWidth
-                    onValueModified: kcm.indicatorRingWidth = value
-                }
+                    QQC2.SpinBox {
+                        Kirigami.FormData.label: "Corner radius (px):"
+                        Layout.preferredWidth: root.fieldWidth
+                        from: 0
+                        to: kcm.indicatorSize / 2
+                        value: kcm.indicatorCornerRadius
+                        onValueModified: kcm.indicatorCornerRadius = value
+                    }
 
-                QQC2.SpinBox {
-                    Kirigami.FormData.label: "Pointer length (px):"
-                    from: 6
-                    to: 200
-                    value: kcm.indicatorPointerLength
-                    onValueModified: kcm.indicatorPointerLength = value
+                    QQC2.SpinBox {
+                        Kirigami.FormData.label: "Line thickness (px):"
+                        Layout.preferredWidth: root.fieldWidth
+                        from: 2
+                        to: 60
+                        value: kcm.indicatorRingWidth
+                        onValueModified: kcm.indicatorRingWidth = value
+                    }
+
+                    QQC2.SpinBox {
+                        Kirigami.FormData.label: "Pointer length (px):"
+                        Layout.preferredWidth: root.fieldWidth
+                        from: 6
+                        to: 200
+                        value: kcm.indicatorPointerLength
+                        onValueModified: kcm.indicatorPointerLength = value
+                    }
                 }
             }
         }
@@ -176,50 +256,73 @@ ColumnLayout {
         QQC2.ScrollView {
             contentWidth: availableWidth
 
-            Kirigami.FormLayout {
+            Item {
                 width: parent.width
+                implicitHeight: outlineForm.implicitHeight + Kirigami.Units.largeSpacing * 2
 
-                QQC2.Switch {
-                    Kirigami.FormData.label: "Visible:"
-                    text: "Show the window placement preview"
-                    checked: kcm.showOutline
-                    onToggled: kcm.showOutline = checked
-                }
+                Kirigami.FormLayout {
+                    id: outlineForm
+                    width: Math.min(parent.width - Kirigami.Units.largeSpacing * 2, root.formWidth)
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    anchors.top: parent.top
+                    anchors.topMargin: Kirigami.Units.largeSpacing
 
-                QQC2.SpinBox {
-                    Kirigami.FormData.label: "Border thickness (px):"
-                    from: 1
-                    to: 20
-                    value: kcm.outlineBorderWidth
-                    onValueModified: kcm.outlineBorderWidth = value
-                }
+                    QQC2.Switch {
+                        Kirigami.FormData.label: "Visible:"
+                        text: "Show the window placement preview"
+                        checked: kcm.showOutline
+                        onToggled: kcm.showOutline = checked
+                    }
 
-                QQC2.SpinBox {
-                    Kirigami.FormData.label: "Corner radius (px):"
-                    from: 0
-                    to: 60
-                    value: kcm.outlineCornerRadius
-                    onValueModified: kcm.outlineCornerRadius = value
-                }
+                    QQC2.SpinBox {
+                        Kirigami.FormData.label: "Border thickness (px):"
+                        Layout.preferredWidth: root.fieldWidth
+                        from: 1
+                        to: 20
+                        value: kcm.outlineBorderWidth
+                        onValueModified: kcm.outlineBorderWidth = value
+                    }
 
-                QQC2.SpinBox {
-                    Kirigami.FormData.label: "Fill opacity (%):"
-                    from: 0
-                    to: 100
-                    value: kcm.outlineFillOpacity
-                    onValueModified: kcm.outlineFillOpacity = value
-                }
+                    QQC2.SpinBox {
+                        Kirigami.FormData.label: "Corner radius (px):"
+                        Layout.preferredWidth: root.fieldWidth
+                        from: 0
+                        to: 60
+                        value: kcm.outlineCornerRadius
+                        onValueModified: kcm.outlineCornerRadius = value
+                    }
 
-                QQC2.SpinBox {
-                    Kirigami.FormData.label: "Animation duration (ms):"
-                    from: 0
-                    to: 1000
-                    stepSize: 10
-                    value: kcm.outlineAnimationDuration
-                    onValueModified: kcm.outlineAnimationDuration = value
+                    QQC2.SpinBox {
+                        Kirigami.FormData.label: "Fill opacity (%):"
+                        Layout.preferredWidth: root.fieldWidth
+                        from: 0
+                        to: 100
+                        value: kcm.outlineFillOpacity
+                        onValueModified: kcm.outlineFillOpacity = value
+                    }
 
-                    QQC2.ToolTip.text: "0 = instant (snaps straight to the new position/size). Higher values glide/grow the outline, and grow/shrink the indicator pointer into and out of maximize, more slowly."
-                    QQC2.ToolTip.visible: hovered
+                    QQC2.Switch {
+                        Kirigami.FormData.label: "Blur:"
+                        text: "Blur the desktop behind the fill"
+                        checked: kcm.outlineBlur
+                        onToggled: kcm.outlineBlur = checked
+
+                        QQC2.ToolTip.text: "Uses KWin's own Blur effect — does nothing if you don't have Blur enabled in Desktop Effects. There's no separate blur strength here: that's a single compositor-wide setting KWin doesn't expose per-window, so Fill opacity above is what controls how much of the blur actually shows through once this is on."
+                        QQC2.ToolTip.visible: hovered
+                    }
+
+                    QQC2.SpinBox {
+                        Kirigami.FormData.label: "Animation duration (ms):"
+                        Layout.preferredWidth: root.fieldWidth
+                        from: 0
+                        to: 1000
+                        stepSize: 10
+                        value: kcm.outlineAnimationDuration
+                        onValueModified: kcm.outlineAnimationDuration = value
+
+                        QQC2.ToolTip.text: "0 = instant (snaps straight to the new position/size). Higher values glide/grow the outline, and grow/shrink the indicator pointer into and out of maximize, more slowly."
+                        QQC2.ToolTip.visible: hovered
+                    }
                 }
             }
         }
@@ -228,21 +331,58 @@ ColumnLayout {
         QQC2.ScrollView {
             contentWidth: availableWidth
 
-            Kirigami.FormLayout {
+            Item {
                 width: parent.width
+                implicitHeight: colorsForm.implicitHeight + Kirigami.Units.largeSpacing * 2
+
+            Kirigami.FormLayout {
+                id: colorsForm
+                width: Math.min(parent.width - Kirigami.Units.largeSpacing * 2, root.formWidth)
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.top: parent.top
+                anchors.topMargin: Kirigami.Units.largeSpacing
 
                 Kirigami.Separator {
                     Kirigami.FormData.isSection: true
-                    Kirigami.FormData.label: "Current color"
+                    Kirigami.FormData.label: "Color source"
+                }
+
+                QQC2.Switch {
+                    Kirigami.FormData.label: "Linked:"
+                    text: "Use the same color for both the outline and the indicator"
+                    checked: kcm.linkIndicatorOutlineColor
+                    onToggled: kcm.linkIndicatorOutlineColor = checked
+                }
+
+                // Outline color — always shown. Statically bound to
+                // kcm.outlineColor/outlineColorSource throughout (not via
+                // dynamic/bracket-notation property lookups): QML's binding
+                // engine doesn't reliably track dependencies through those
+                // inside declarative bindings, confirmed the hard way
+                // earlier this session (a ListView model that silently
+                // rendered nothing). Imperative one-shot reads/writes
+                // (inside functions, not bindings) don't have that problem,
+                // so colorPopup below still uses a dynamic target safely.
+                QQC2.ComboBox {
+                    Kirigami.FormData.label: "Outline source:"
+                    Layout.preferredWidth: root.fieldWidth
+                    textRole: "text"
+                    model: [
+                        { value: "manual", text: "Manual" },
+                        { value: "theme", text: "Theme accent (live)" },
+                        { value: "wallpaper", text: "From wallpaper (live)" },
+                    ]
+                    currentIndex: model.findIndex(m => m.value === kcm.outlineColorSource)
+                    onActivated: kcm.outlineColorSource = model[currentIndex].value
                 }
 
                 RowLayout {
-                    Kirigami.FormData.label: "Outline / indicator:"
+                    Kirigami.FormData.label: "Outline color:"
                     spacing: Kirigami.Units.largeSpacing
 
-                    // A checkerboard behind the swatch so a transparent or
-                    // semi-transparent pick is actually visible, not just a
-                    // flat color that happens to look "washed out".
+                    // A checkerboard behind the swatch so a transparent/
+                    // semi-transparent color is actually visible, not just
+                    // washed out.
                     Item {
                         Layout.preferredWidth: Kirigami.Units.gridUnit * 3
                         Layout.preferredHeight: Kirigami.Units.gridUnit * 2
@@ -270,101 +410,107 @@ ColumnLayout {
 
                         MouseArea {
                             anchors.fill: parent
-                            onClicked: colorPopup.open()
+                            onClicked: {
+                                colorPopup.targetProperty = "outlineColor";
+                                colorPopup.open();
+                            }
                         }
                     }
 
                     QQC2.Button {
                         text: "Customize…"
-                        onClicked: colorPopup.open()
-                    }
-                }
-
-                Kirigami.Separator {
-                    Kirigami.FormData.isSection: true
-                    Kirigami.FormData.label: "Theme colors"
-                }
-
-                QQC2.ScrollView {
-                    Kirigami.FormData.label: "Quick pick:"
-                    implicitWidth: Kirigami.Units.gridUnit * 22
-                    implicitHeight: Kirigami.Units.gridUnit * 11
-                    clip: true
-
-                    Column {
-                        width: parent.width
-
-                        // Kirigami.Theme's own color properties — these
-                        // track the active Plasma color scheme live
-                        // (they're not a one-time snapshot), so switching
-                        // the system theme while this page is open updates
-                        // the rows immediately.
-                        Repeater {
-                            model: [
-                                { label: "Accent", color: Kirigami.Theme.highlightColor },
-                                { label: "Text", color: Kirigami.Theme.textColor },
-                                { label: "Disabled text", color: Kirigami.Theme.disabledTextColor },
-                                { label: "Active text", color: Kirigami.Theme.activeTextColor },
-                                { label: "Link", color: Kirigami.Theme.linkColor },
-                                { label: "Visited link", color: Kirigami.Theme.visitedLinkColor },
-                                { label: "Positive", color: Kirigami.Theme.positiveTextColor },
-                                { label: "Neutral", color: Kirigami.Theme.neutralTextColor },
-                                { label: "Negative", color: Kirigami.Theme.negativeTextColor },
-                                { label: "Background", color: Kirigami.Theme.backgroundColor },
-                                { label: "Alternate background", color: Kirigami.Theme.alternateBackgroundColor },
-                                { label: "Hover", color: Kirigami.Theme.hoverColor },
-                                { label: "Focus", color: Kirigami.Theme.focusColor },
-                            ]
-
-                            delegate: Rectangle {
-                                id: delegateRoot
-                                width: parent ? parent.width : 0
-                                height: Kirigami.Units.gridUnit * 2
-                                radius: 4
-                                readonly property bool isSelected: kcm.outlineColor.toString() === modelData.color.toString()
-                                color: isSelected ? Qt.rgba(Kirigami.Theme.highlightColor.r, Kirigami.Theme.highlightColor.g, Kirigami.Theme.highlightColor.b, 0.25)
-                                     : rowHover.containsMouse ? Kirigami.Theme.hoverColor
-                                     : "transparent"
-
-                                RowLayout {
-                                    anchors.fill: parent
-                                    anchors.margins: Kirigami.Units.smallSpacing
-                                    anchors.leftMargin: Kirigami.Units.largeSpacing
-                                    anchors.rightMargin: Kirigami.Units.largeSpacing
-                                    spacing: Kirigami.Units.largeSpacing
-
-                                    Rectangle {
-                                        Layout.preferredWidth: Kirigami.Units.gridUnit * 1.5
-                                        Layout.preferredHeight: Kirigami.Units.gridUnit * 1.5
-                                        radius: 4
-                                        color: modelData.color
-                                        border.width: delegateRoot.isSelected ? 2 : 1
-                                        border.color: Kirigami.Theme.textColor
-                                    }
-
-                                    QQC2.Label {
-                                        Layout.fillWidth: true
-                                        text: modelData.label
-                                        font.bold: delegateRoot.isSelected
-                                    }
-
-                                    QQC2.Label {
-                                        text: modelData.color.toString().toUpperCase()
-                                        opacity: 0.6
-                                        font.pointSize: Kirigami.Theme.smallFont.pointSize
-                                    }
-                                }
-
-                                MouseArea {
-                                    id: rowHover
-                                    anchors.fill: parent
-                                    hoverEnabled: true
-                                    onClicked: kcm.outlineColor = modelData.color
-                                }
-                            }
+                        onClicked: {
+                            colorPopup.targetProperty = "outlineColor";
+                            colorPopup.open();
                         }
                     }
                 }
+
+                // Indicator color — only shown when not linked to the
+                // outline's. Kirigami.FormLayout collapses hidden rows
+                // (no blank gap left behind), same pattern as every other
+                // conditional row already in this KCM.
+                QQC2.ComboBox {
+                    Kirigami.FormData.label: "Indicator source:"
+                    Layout.preferredWidth: root.fieldWidth
+                    visible: !kcm.linkIndicatorOutlineColor
+                    textRole: "text"
+                    model: [
+                        { value: "manual", text: "Manual" },
+                        { value: "theme", text: "Theme accent (live)" },
+                        { value: "wallpaper", text: "From wallpaper (live)" },
+                    ]
+                    currentIndex: model.findIndex(m => m.value === kcm.indicatorColorSource)
+                    onActivated: kcm.indicatorColorSource = model[currentIndex].value
+                }
+
+                RowLayout {
+                    Kirigami.FormData.label: "Indicator color:"
+                    visible: !kcm.linkIndicatorOutlineColor
+                    spacing: Kirigami.Units.largeSpacing
+
+                    Item {
+                        Layout.preferredWidth: Kirigami.Units.gridUnit * 3
+                        Layout.preferredHeight: Kirigami.Units.gridUnit * 2
+
+                        Grid {
+                            anchors.fill: parent
+                            columns: 6
+                            rows: 3
+                            Repeater {
+                                model: 18
+                                Rectangle {
+                                    width: parent.width / 6
+                                    height: parent.height / 3
+                                    color: (Math.floor(index / 6) + (index % 6)) % 2 === 0 ? "#cccccc" : "#ffffff"
+                                }
+                            }
+                        }
+
+                        Rectangle {
+                            anchors.fill: parent
+                            color: kcm.indicatorColor
+                            border.width: 1
+                            border.color: Kirigami.Theme.textColor
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            onClicked: {
+                                colorPopup.targetProperty = "indicatorColor";
+                                colorPopup.open();
+                            }
+                        }
+                    }
+
+                    QQC2.Button {
+                        text: "Customize…"
+                        onClicked: {
+                            colorPopup.targetProperty = "indicatorColor";
+                            colorPopup.open();
+                        }
+                    }
+                }
+
+                QQC2.TextField {
+                    Kirigami.FormData.label: "Wallpaper color file:"
+                    placeholderText: "Leave empty to use pywal's default output"
+                    text: kcm.wallpaperColorPath
+                    onEditingFinished: kcm.wallpaperColorPath = text
+
+                    QQC2.ToolTip.text: "Only used when a color's source above is \"From wallpaper\". Empty reads pywal's own output (~/.cache/wal/colors.json) with no setup needed. A path here is instead read as a single plain hex color (#RRGGBB or #RRGGBBAA) — point a matugen template (or anything else) at it."
+                    QQC2.ToolTip.visible: hovered
+                }
+
+                // The "theme colors quick-pick" list that used to live here
+                // was removed — it never rendered its text correctly across
+                // several different rewrites (RowLayout, raw x/y
+                // positioning, QQC2.Label, plain Text, explicit colors; see
+                // timeline.md for the full trail), and "Theme accent (live)"
+                // in the source dropdowns above already covers "use a theme
+                // color" without it. Sticking to source + manual picker for
+                // now.
+            }
             }
         }
     }
@@ -384,21 +530,29 @@ ColumnLayout {
         focus: true
         closePolicy: QQC2.Popup.CloseOnEscape | QQC2.Popup.CloseOnPressOutside
 
+        // Which kcm color property this instance is currently editing —
+        // set right before open() by whichever "Customize…" button was
+        // clicked. Read/written only inside the plain JS functions below,
+        // never as part of a declarative binding, so the kcm[...] dynamic
+        // lookup here is safe (see the note above the Outline ComboBox).
+        property string targetProperty: "outlineColor"
+
         property int red: 0
         property int green: 0
         property int blue: 0
         property int alpha: 255
 
         function syncFromConfig() {
-            red = Math.round(kcm.outlineColor.r * 255);
-            green = Math.round(kcm.outlineColor.g * 255);
-            blue = Math.round(kcm.outlineColor.b * 255);
-            alpha = Math.round(kcm.outlineColor.a * 255);
+            const current = kcm[targetProperty];
+            red = Math.round(current.r * 255);
+            green = Math.round(current.g * 255);
+            blue = Math.round(current.b * 255);
+            alpha = Math.round(current.a * 255);
             hexField.text = toHex();
         }
 
         function commit() {
-            kcm.outlineColor = Qt.rgba(red / 255, green / 255, blue / 255, alpha / 255);
+            kcm[targetProperty] = Qt.rgba(red / 255, green / 255, blue / 255, alpha / 255);
         }
 
         function toHex() {
@@ -442,7 +596,7 @@ ColumnLayout {
             RowLayout {
                 Layout.fillWidth: true
 
-                QQC2.Label { text: "Hex:" }
+                Text { text: "Hex:"; color: Kirigami.Theme.textColor; verticalAlignment: Text.AlignVCenter }
 
                 QQC2.TextField {
                     id: hexField
@@ -460,7 +614,7 @@ ColumnLayout {
 
             RowLayout {
                 Layout.fillWidth: true
-                QQC2.Label { text: "R"; Layout.preferredWidth: Kirigami.Units.gridUnit }
+                Text { text: "R"; Layout.preferredWidth: Kirigami.Units.gridUnit; color: Kirigami.Theme.textColor; verticalAlignment: Text.AlignVCenter }
                 QQC2.Slider {
                     Layout.fillWidth: true
                     from: 0; to: 255; stepSize: 1
@@ -471,12 +625,12 @@ ColumnLayout {
                         hexField.text = colorPopup.toHex();
                     }
                 }
-                QQC2.Label { text: colorPopup.red; Layout.preferredWidth: Kirigami.Units.gridUnit * 1.5; horizontalAlignment: Text.AlignRight }
+                Text { text: colorPopup.red; Layout.preferredWidth: Kirigami.Units.gridUnit * 1.5; horizontalAlignment: Text.AlignRight; color: Kirigami.Theme.textColor; verticalAlignment: Text.AlignVCenter }
             }
 
             RowLayout {
                 Layout.fillWidth: true
-                QQC2.Label { text: "G"; Layout.preferredWidth: Kirigami.Units.gridUnit }
+                Text { text: "G"; Layout.preferredWidth: Kirigami.Units.gridUnit; color: Kirigami.Theme.textColor; verticalAlignment: Text.AlignVCenter }
                 QQC2.Slider {
                     Layout.fillWidth: true
                     from: 0; to: 255; stepSize: 1
@@ -487,12 +641,12 @@ ColumnLayout {
                         hexField.text = colorPopup.toHex();
                     }
                 }
-                QQC2.Label { text: colorPopup.green; Layout.preferredWidth: Kirigami.Units.gridUnit * 1.5; horizontalAlignment: Text.AlignRight }
+                Text { text: colorPopup.green; Layout.preferredWidth: Kirigami.Units.gridUnit * 1.5; horizontalAlignment: Text.AlignRight; color: Kirigami.Theme.textColor; verticalAlignment: Text.AlignVCenter }
             }
 
             RowLayout {
                 Layout.fillWidth: true
-                QQC2.Label { text: "B"; Layout.preferredWidth: Kirigami.Units.gridUnit }
+                Text { text: "B"; Layout.preferredWidth: Kirigami.Units.gridUnit; color: Kirigami.Theme.textColor; verticalAlignment: Text.AlignVCenter }
                 QQC2.Slider {
                     Layout.fillWidth: true
                     from: 0; to: 255; stepSize: 1
@@ -503,12 +657,12 @@ ColumnLayout {
                         hexField.text = colorPopup.toHex();
                     }
                 }
-                QQC2.Label { text: colorPopup.blue; Layout.preferredWidth: Kirigami.Units.gridUnit * 1.5; horizontalAlignment: Text.AlignRight }
+                Text { text: colorPopup.blue; Layout.preferredWidth: Kirigami.Units.gridUnit * 1.5; horizontalAlignment: Text.AlignRight; color: Kirigami.Theme.textColor; verticalAlignment: Text.AlignVCenter }
             }
 
             RowLayout {
                 Layout.fillWidth: true
-                QQC2.Label { text: "A"; Layout.preferredWidth: Kirigami.Units.gridUnit }
+                Text { text: "A"; Layout.preferredWidth: Kirigami.Units.gridUnit; color: Kirigami.Theme.textColor; verticalAlignment: Text.AlignVCenter }
                 QQC2.Slider {
                     Layout.fillWidth: true
                     from: 0; to: 255; stepSize: 1
@@ -519,7 +673,7 @@ ColumnLayout {
                         hexField.text = colorPopup.toHex();
                     }
                 }
-                QQC2.Label { text: colorPopup.alpha; Layout.preferredWidth: Kirigami.Units.gridUnit * 1.5; horizontalAlignment: Text.AlignRight }
+                Text { text: colorPopup.alpha; Layout.preferredWidth: Kirigami.Units.gridUnit * 1.5; horizontalAlignment: Text.AlignRight; color: Kirigami.Theme.textColor; verticalAlignment: Text.AlignVCenter }
             }
 
             QQC2.DialogButtonBox {
@@ -531,15 +685,4 @@ ColumnLayout {
         }
     }
 
-    // Settings here are instant-apply on disk, but the already-running
-    // effect (kwin_wayland, a separate process from this KCM) only picks up
-    // the change once it's reloaded. Shown under every tab, not just one,
-    // since it's general information rather than tied to a category.
-    Kirigami.InlineMessage {
-        Layout.fillWidth: true
-        Layout.margins: Kirigami.Units.smallSpacing
-        visible: true
-        type: Kirigami.MessageType.Information
-        text: "Settings apply automatically the next time you hold the hyperkey — no need to log out or toggle the effect."
-    }
 }
