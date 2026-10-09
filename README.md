@@ -1,10 +1,8 @@
 # Loop Lite
 
-A [Loop](https://github.com/MrKai77/Loop)-style directional window snapping tool for KDE Plasma 6.7+ / KWin.
+A [Loop](https://github.com/MrKai77/Loop)-inspired directional window snapping tool for KDE Plasma 6.7+ / KWin.
 
 Hold a hyperkey (Caps Lock, remapped to F24), drag the mouse or press a direction key to pick where the active window should go, release to snap it there — left/right halves, top/bottom halves, or one of the four quarter corners, previewed live with an on-screen outline and a direction indicator.
-
-Heavily inspired by [Loop](https://github.com/MrKai77/Loop) for macOS.
 
 ## Features
 
