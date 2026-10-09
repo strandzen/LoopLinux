@@ -13,6 +13,10 @@ Hold a hyperkey (Caps Lock, remapped to F24), drag the mouse or press a directio
 - Arrow keys, WASD, or HJKL for direction (configurable preset), including combining two keys (e.g. Up+Left) for a corner - or disable direction keys entirely for mouse-only use
 - Hyperkey+Enter maximizes, Hyperkey+Backspace minimizes
 - Esc, or releasing with no direction chosen, cancels cleanly
+- Configurable hyperkey trigger: instant (default), a hold delay, or a double-click gesture
+- Snap to whichever monitor the cursor is on instead of always the active window's own screen (opt-in)
+- Independent colors for the indicator and the outline, each sourced from a manual pick, the live Plasma accent color, or the current wallpaper (reads pywal's output, or a custom hex-color file for matugen/anything similar)
+- Optional blur behind the outline's translucent fill, using KWin's own Blur effect
 - Extensive, tabbed settings page (System Settings → Desktop Effects → Sirkel): Behavior, Indicator, Outline, and Colors each on their own tab
 
 ## Requirements
@@ -77,10 +81,10 @@ While held:
 ## Configuration
 
 All settings live in **System Settings → Desktop Effects → Sirkel** (the configure/gear icon next to the effect), across four tabs:
-- **Behavior** - mouse deadzone (horizontal/vertical), window padding, keybind scheme (arrows/WASD/HJKL/none)
+- **Behavior** - mouse deadzone (horizontal/vertical), window padding, snap-to-cursor's-monitor toggle, keybind scheme (arrows/WASD/HJKL/none), hyperkey trigger mode (instant/delay/double-click)
 - **Indicator** - visibility, spawn-at-cursor vs. centered, size, corner radius, ring thickness, pointer length, text label
-- **Outline** - visibility, border thickness, corner radius, fill opacity, glide/grow animation speed
-- **Colors** - a custom color picker (hex, or individual R/G/B/A sliders) plus quick-pick swatches sourced live from the current Plasma color scheme
+- **Outline** - visibility, border thickness, corner radius, fill opacity, blur, glide/grow animation speed
+- **Colors** - independent source per target (outline and indicator): a manual color (hex field or R/G/B/A sliders), the live theme accent color, or a wallpaper-derived color - with a "linked" toggle to keep both matched by default
 
 Settings changes take effect automatically the next time you hold the hyperkey - no need to log out or restart the effect.
 
@@ -88,7 +92,7 @@ Settings changes take effect automatically the next time you hold the hyperkey -
 
 - Only one window is placed at a time - no multi-window "thirds" layouts yet
 - Keybind schemes are fixed presets (arrows / WASD / HJKL / none), not arbitrary rebinding
-- Snapping doesn't move a window to a different monitor
+- No dedicated action to move a window *to* a different monitor - "snap to cursor's monitor" changes which screen a snap targets, but there's no equivalent of Loop's screen-switching gesture yet
 
 ## Comparison with Loop
 
@@ -102,10 +106,11 @@ How Sirkel stacks up against [Loop](https://github.com/MrKai77/Loop), the macOS 
 | Modifier + mouse | ✅ | ✅ |
 | Halves & quarters | ✅ | ✅ |
 | Padding/margins | ✅ | ✅ |
-| Radial menu theming (width/shape/color) | ✅ | ✅  |
-| Preview theming (padding, corner radius, border color/width) | ✅ | ✅ 
+| Radial menu theming (width/shape/color) | ✅ | ✅ |
+| Preview theming (padding, corner radius, border color/width) | ✅ | ✅ |
 | Indicator/preview independently toggleable | ✅ | ✅ |
-| Maximize / center gesture | ✅ | ⏳ |
+| Maximize / center gesture | ✅ | ✅ |
+| Separate colors for indicator vs. outline | ✅ | ✅ |
 | Thirds (horizontal/vertical, two-thirds variants) | ✅ | ❌ |
 | Per-action custom keybinds (any key → any specific action) | ✅ | ❌ |
 | Cycles (repeated press/click cycles through size variants) | ✅ | ❌ |
@@ -116,7 +121,6 @@ How Sirkel stacks up against [Loop](https://github.com/MrKai77/Loop), the macOS 
 | Screen switching (move window to an adjacent monitor) | ✅ | ❌ |
 | Almost Maximize / Centre as distinct actions | ✅ | ❌ |
 | Snap via drag-to-edge (no hyperkey needed) | ✅ | ❌ |
-| Separate colors for indicator vs. outline | ✅  | ❌ |
 
 ## Roadmap
 
@@ -124,7 +128,6 @@ How Sirkel stacks up against [Loop](https://github.com/MrKai77/Loop), the macOS 
 - **Thirds** - horizontal and vertical third/two-thirds placements, not just halves and quarters
 - **Cycles** - repeatedly pressing/clicking the same direction cycles the window through a small set of size variants (e.g. half → two-thirds → third) instead of re-picking the same geometry
 - **Screen switching** - move the active window to an adjacent monitor
-- **Separate colors** - Separate colors for indicator, preview, pointer, etc.
 
 ## License
 
