@@ -21,6 +21,9 @@ Hold a hyperkey (Caps Lock, remapped to F24), drag the mouse or press a directio
 - [keyd](https://github.com/rvaiya/keyd) - hard dependency, used to remap Caps Lock to F24 at the input level
 - Build dependencies: CMake, Extra CMake Modules (ECM), Qt6 (Core, Gui, Qml, Quick, DBus), KDE Frameworks 6 (Config, CoreAddons, GlobalAccel, KCMUtils), and KWin's own development headers
 
+## Recommended
+- [Geometry Change](https://github.com/peterfajdiga/kwin4_effect_geometry_change) - For fancier animations when windows change positons.
+
 ## Installation
 
 ### 1. Configure keyd
